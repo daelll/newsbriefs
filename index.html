@@ -1,0 +1,1653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Morning Brief</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=JetBrains+Mono:wght@300;400;500&family=Manrope:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0c0c0e;
+  --surface: #131316;
+  --surface2: #1a1a1f;
+  --border: #252528;
+  --border2: #2e2e34;
+  --amber: #d4a853;
+  --amber-dim: #8a6830;
+  --text: #e8e4dc;
+  --text-dim: #6b6760;
+  --text-mid: #9e9890;
+  --red: #b84c3a;
+  --green: #4a8c6a;
+  --white: #f0ece4;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Manrope', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+  cursor: default;
+}
+
+/* ── NOISE TEXTURE OVERLAY ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 1000;
+  opacity: 0.4;
+}
+
+/* ══════════════════════════════════════
+   SCREEN SYSTEM
+══════════════════════════════════════ */
+.screen {
+  display: none;
+  min-height: 100vh;
+}
+.screen.active { display: flex; flex-direction: column; }
+
+/* ══════════════════════════════════════
+   SCREEN 1 — HOME
+══════════════════════════════════════ */
+#screen-home {
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 2rem;
+  position: relative;
+}
+
+/* Subtle grid background */
+#screen-home::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 60px 60px;
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.home-inner {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Logo / Brand */
+.brand {
+  text-align: center;
+  margin-bottom: 4rem;
+}
+
+.brand-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.3em;
+  color: var(--amber);
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+  opacity: 0;
+  animation: fadeUp 0.6s 0.1s forwards;
+}
+
+.brand-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(3.5rem, 8vw, 6rem);
+  font-weight: 300;
+  letter-spacing: -0.02em;
+  line-height: 0.95;
+  color: var(--white);
+  opacity: 0;
+  animation: fadeUp 0.7s 0.2s forwards;
+}
+
+.brand-title em {
+  font-style: italic;
+  color: var(--amber);
+}
+
+.brand-sub {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  letter-spacing: 0.05em;
+  margin-top: 1.2rem;
+  font-weight: 300;
+  opacity: 0;
+  animation: fadeUp 0.7s 0.35s forwards;
+}
+
+/* Date strip */
+.date-strip {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 3rem;
+  opacity: 0;
+  animation: fadeUp 0.7s 0.45s forwards;
+}
+.date-strip::before,
+.date-strip::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border2);
+}
+.date-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+}
+
+/* Category grid */
+.category-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 1rem;
+  align-self: flex-start;
+  opacity: 0;
+  animation: fadeUp 0.7s 0.5s forwards;
+}
+
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  width: 100%;
+  margin-bottom: 2rem;
+  opacity: 0;
+  animation: fadeUp 0.7s 0.6s forwards;
+}
+
+.cat-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 1.1rem 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+  position: relative;
+  overflow: hidden;
+}
+
+.cat-btn::before {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0;
+  width: 0; height: 2px;
+  background: var(--amber);
+  transition: width 0.25s;
+}
+
+.cat-btn:hover { border-color: var(--border2); background: var(--surface2); }
+.cat-btn:hover::before { width: 100%; }
+
+.cat-btn.selected {
+  border-color: var(--amber-dim);
+  background: var(--surface2);
+}
+.cat-btn.selected::before { width: 100%; }
+
+.cat-icon {
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+.cat-name {
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text);
+  display: block;
+  margin-bottom: 0.2rem;
+}
+
+.cat-desc {
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  font-weight: 300;
+  line-height: 1.4;
+}
+
+/* Custom topic input */
+.custom-wrap {
+  width: 100%;
+  margin-bottom: 2rem;
+  display: none;
+  opacity: 0;
+  animation: fadeIn 0.3s forwards;
+}
+.custom-wrap.visible { display: block; }
+.custom-input {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.85rem;
+  padding: 0.85rem 1rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.custom-input:focus { border-color: var(--amber-dim); }
+.custom-input::placeholder { color: var(--text-dim); }
+
+/* Generate button */
+.generate-btn {
+  width: 100%;
+  background: var(--amber);
+  border: none;
+  color: #0c0c0e;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 1.1rem 2rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+  opacity: 0;
+  animation: fadeUp 0.7s 0.75s forwards;
+}
+
+.generate-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0);
+  transition: background 0.2s;
+}
+.generate-btn:hover::after { background: rgba(255,255,255,0.1); }
+.generate-btn:active { transform: scale(0.99); }
+
+/* ══════════════════════════════════════
+   SCREEN 2 — LOADING
+══════════════════════════════════════ */
+#screen-loading {
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.loading-inner {
+  text-align: center;
+  max-width: 480px;
+  padding: 2rem;
+}
+
+.loading-orb {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 2.5rem;
+  position: relative;
+}
+
+.orb-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid var(--amber-dim);
+  animation: orbPulse 2s ease-in-out infinite;
+}
+.orb-ring:nth-child(2) { inset: 10px; animation-delay: 0.3s; border-color: var(--amber); }
+.orb-ring:nth-child(3) { inset: 20px; animation-delay: 0.6s; }
+.orb-dot {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px; height: 8px;
+  background: var(--amber);
+  border-radius: 50%;
+  animation: orbGlow 2s ease-in-out infinite;
+}
+
+@keyframes orbPulse {
+  0%,100% { transform: scale(1); opacity: 0.4; }
+  50% { transform: scale(1.08); opacity: 1; }
+}
+@keyframes orbGlow {
+  0%,100% { box-shadow: 0 0 0 0 rgba(212,168,83,0.4); }
+  50% { box-shadow: 0 0 20px 6px rgba(212,168,83,0.2); }
+}
+
+.loading-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.6rem;
+  font-weight: 300;
+  color: var(--white);
+  margin-bottom: 0.75rem;
+  letter-spacing: 0.02em;
+}
+
+.loading-step {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  color: var(--amber);
+  letter-spacing: 0.1em;
+  margin-bottom: 2rem;
+  min-height: 1.2em;
+}
+
+.loading-bar-wrap {
+  width: 100%;
+  height: 1px;
+  background: var(--border2);
+  position: relative;
+  overflow: hidden;
+}
+.loading-bar-fill {
+  height: 100%;
+  background: var(--amber);
+  width: 0%;
+  transition: width 0.6s ease;
+  position: relative;
+}
+.loading-bar-fill::after {
+  content: '';
+  position: absolute;
+  right: 0; top: -2px;
+  width: 4px; height: 5px;
+  background: var(--amber);
+  box-shadow: 0 0 8px 2px var(--amber);
+}
+
+.loading-sources {
+  margin-top: 1.5rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  letter-spacing: 0.05em;
+  line-height: 2;
+}
+.loading-sources span {
+  display: inline-block;
+  margin: 0.1rem 0.3rem;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  opacity: 0;
+  animation: fadeIn 0.4s forwards;
+}
+
+/* ══════════════════════════════════════
+   SCREEN 3 — RESULTS
+══════════════════════════════════════ */
+#screen-results {
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Results header */
+.results-header {
+  border-bottom: 1px solid var(--border);
+  padding: 0 2.5rem;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  position: sticky;
+  top: 0;
+  background: rgba(12,12,14,0.95);
+  backdrop-filter: blur(12px);
+  z-index: 50;
+  height: 58px;
+}
+
+.results-brand {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--white);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.results-brand span { color: var(--amber); }
+
+.results-meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+  flex: 1;
+}
+
+.live-dot {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--green);
+  letter-spacing: 0.1em;
+}
+.live-dot::before {
+  content: '';
+  width: 6px; height: 6px;
+  background: var(--green);
+  border-radius: 50%;
+  animation: blink 1.5s infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+.header-back {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  padding: 0.35rem 0.8rem;
+  cursor: pointer;
+  background: none;
+  letter-spacing: 0.08em;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.header-back:hover { color: var(--text); border-color: var(--border2); }
+
+/* Tab nav */
+.tab-nav {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  padding: 0 2.5rem;
+  background: var(--bg);
+}
+
+.tab-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  padding: 1rem 0;
+  margin-right: 2.5rem;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  position: relative;
+  top: 1px;
+}
+.tab-btn:hover { color: var(--text-mid); }
+.tab-btn.active { color: var(--amber); border-bottom-color: var(--amber); }
+
+/* Tab panels */
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ── BRIEF TAB ── */
+.brief-layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  min-height: calc(100vh - 120px);
+}
+
+.brief-main {
+  padding: 3rem 2.5rem;
+  border-right: 1px solid var(--border);
+}
+
+.brief-kicker {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: 1rem;
+}
+
+.brief-headline {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+  font-weight: 400;
+  line-height: 1.15;
+  color: var(--white);
+  margin-bottom: 1rem;
+  letter-spacing: -0.01em;
+}
+
+.brief-lede {
+  font-size: 0.9rem;
+  line-height: 1.7;
+  color: var(--text-mid);
+  font-weight: 300;
+  margin-bottom: 2.5rem;
+  padding-bottom: 2.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Story sections */
+.story {
+  margin-bottom: 2.5rem;
+  padding-bottom: 2.5rem;
+  border-bottom: 1px solid var(--border);
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.5s, transform 0.5s;
+}
+.story.revealed { opacity: 1; transform: translateY(0); }
+.story:last-child { border-bottom: none; }
+
+.story-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 0.6rem;
+}
+
+.story-headline {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.3rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--white);
+  margin-bottom: 0.8rem;
+}
+
+.story-body {
+  font-size: 0.875rem;
+  line-height: 1.85;
+  color: var(--text-mid);
+  font-weight: 300;
+}
+.story-body p { margin-bottom: 0.75rem; }
+.story-body p:last-child { margin-bottom: 0; }
+
+/* Brief sidebar */
+.brief-sidebar {
+  padding: 2rem 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* Sources */
+.sidebar-section-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.source-list { display: flex; flex-direction: column; gap: 0.3rem; }
+.source-item {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  color: var(--text-dim);
+  padding: 0.3rem 0;
+  border-bottom: 1px solid var(--border);
+  letter-spacing: 0.04em;
+}
+.source-item:last-child { border-bottom: none; }
+
+/* Q&A */
+.qa-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 320px;
+  overflow-y: auto;
+  margin-bottom: 0.75rem;
+}
+
+.qa-msg { display: flex; flex-direction: column; gap: 0.2rem; }
+.qa-role {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.qa-bubble {
+  font-size: 0.78rem;
+  line-height: 1.6;
+  padding: 0.6rem 0.8rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-mid);
+  font-weight: 300;
+}
+.qa-msg.user .qa-bubble {
+  background: var(--surface2);
+  border-color: var(--border2);
+  color: var(--text);
+}
+
+.qa-input-row {
+  display: flex;
+  gap: 0.5rem;
+}
+.qa-input {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.78rem;
+  padding: 0.5rem 0.75rem;
+  outline: none;
+  font-weight: 300;
+  transition: border-color 0.2s;
+}
+.qa-input:focus { border-color: var(--border2); }
+.qa-input::placeholder { color: var(--text-dim); }
+.qa-send {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  color: var(--amber);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.05em;
+}
+.qa-send:hover { background: var(--amber); color: var(--bg); border-color: var(--amber); }
+.qa-send:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* ── PODCAST TAB ── */
+.podcast-layout {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 3rem 2.5rem;
+}
+
+.podcast-header {
+  margin-bottom: 3rem;
+}
+
+.podcast-kicker {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: 0.75rem;
+}
+
+.podcast-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 2rem;
+  font-weight: 300;
+  color: var(--white);
+  margin-bottom: 0.5rem;
+}
+
+.podcast-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  font-weight: 300;
+  margin-bottom: 2rem;
+}
+
+/* Player */
+.player-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 2rem;
+  margin-bottom: 2rem;
+}
+
+.player-status {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+  margin-bottom: 1.5rem;
+  text-transform: uppercase;
+}
+
+.player-controls {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.play-circle {
+  width: 48px; height: 48px;
+  border: 1.5px solid var(--amber);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  background: none;
+}
+.play-circle:hover { background: var(--amber); }
+.play-circle:hover svg { fill: var(--bg); }
+.play-circle svg { width: 16px; height: 16px; fill: var(--amber); }
+
+.player-info { flex: 1; }
+.player-track {
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--white);
+  margin-bottom: 0.25rem;
+}
+.player-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--text-dim);
+}
+
+.player-download {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  padding: 0.4rem 0.75rem;
+  text-decoration: none;
+  transition: all 0.15s;
+  letter-spacing: 0.08em;
+}
+.player-download:hover { color: var(--amber); border-color: var(--amber-dim); }
+
+.progress-track {
+  width: 100%;
+  height: 2px;
+  background: var(--border2);
+  cursor: pointer;
+  position: relative;
+}
+.progress-fill {
+  height: 100%;
+  background: var(--amber);
+  width: 0%;
+  pointer-events: none;
+}
+
+/* Gen button */
+.gen-podcast-btn {
+  background: none;
+  border: 1px solid var(--border2);
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.9rem 1.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+.gen-podcast-btn:hover { border-color: var(--amber-dim); color: var(--amber); }
+.gen-podcast-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.gen-podcast-btn .btn-icon { font-size: 0.9rem; }
+
+/* Podcast settings row */
+.podcast-settings {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.setting-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.setting-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.setting-select {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  padding: 0.5rem 0.75rem;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.setting-select:hover, .setting-select:focus { border-color: var(--border2); }
+
+/* Gen progress */
+.gen-progress {
+  display: none;
+  margin-bottom: 1.5rem;
+}
+.gen-progress.visible { display: block; }
+.gen-progress-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  color: var(--amber);
+  letter-spacing: 0.08em;
+  margin-bottom: 0.5rem;
+}
+.gen-progress-bar { height: 1px; background: var(--border2); }
+.gen-progress-fill { height: 100%; background: var(--amber); width: 0%; transition: width 0.5s; }
+
+/* ── INSIGHTS TAB ── */
+.insights-layout {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 3rem 2.5rem;
+}
+
+.insights-header {
+  margin-bottom: 3rem;
+}
+
+.insights-kicker {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: 0.75rem;
+}
+
+.insights-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 2rem;
+  font-weight: 300;
+  color: var(--white);
+  margin-bottom: 0.5rem;
+}
+
+.insights-sub {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  font-weight: 300;
+  margin-bottom: 2rem;
+}
+
+.gen-insights-btn {
+  background: none;
+  border: 1px solid var(--border2);
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.9rem 1.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+.gen-insights-btn:hover { border-color: var(--amber-dim); color: var(--amber); }
+.gen-insights-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* Insight cards */
+.insights-list { display: flex; flex-direction: column; gap: 0; }
+
+.insight-card {
+  border-left: 1px solid var(--border);
+  padding: 1.5rem 1.75rem;
+  border-bottom: 1px solid var(--border);
+  opacity: 0;
+  transform: translateX(-8px);
+  transition: opacity 0.4s, transform 0.4s;
+  position: relative;
+}
+.insight-card:first-child { border-top: 1px solid var(--border); }
+.insight-card.revealed { opacity: 1; transform: translateX(0); }
+.insight-card::before {
+  content: '';
+  position: absolute;
+  left: -1px; top: 0;
+  width: 2px;
+  height: 0;
+  background: var(--amber);
+  transition: height 0.4s;
+}
+.insight-card.revealed::before { height: 100%; }
+
+.insight-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  color: var(--amber-dim);
+  letter-spacing: 0.15em;
+  margin-bottom: 0.5rem;
+}
+
+.insight-text {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.15rem;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--white);
+  margin-bottom: 0.5rem;
+}
+
+.insight-detail {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  font-weight: 300;
+  line-height: 1.6;
+}
+
+/* ── SHARED ELEMENTS ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); }
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 2rem; right: 2rem;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  padding: 0.75rem 1.25rem;
+  letter-spacing: 0.05em;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: all 0.25s;
+  pointer-events: none;
+  z-index: 999;
+  max-width: 320px;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- ══ SCREEN 1: HOME ══ -->
+<div id="screen-home" class="screen active">
+  <div class="home-inner">
+    <div class="brand">
+      <div class="brand-eyebrow">AI-Powered News Intelligence</div>
+      <h1 class="brand-title">Morning<br><em>Brief</em></h1>
+      <p class="brand-sub">Real-time international news, curated while you slept.</p>
+    </div>
+
+    <div class="date-strip">
+      <div class="date-text" id="homeDateText">—</div>
+    </div>
+
+    <div class="category-label">Select your focus</div>
+
+    <div class="category-grid">
+      <button class="cat-btn selected" data-cat="general" onclick="selectCat(this)">
+        <span class="cat-icon">◉</span>
+        <span class="cat-name">World News</span>
+        <span class="cat-desc">Top international stories across all domains</span>
+      </button>
+      <button class="cat-btn" data-cat="geopolitics" onclick="selectCat(this)">
+        <span class="cat-icon">◈</span>
+        <span class="cat-name">Geopolitics</span>
+        <span class="cat-desc">Diplomatic shifts, conflicts, power dynamics</span>
+      </button>
+      <button class="cat-btn" data-cat="finance" onclick="selectCat(this)">
+        <span class="cat-icon">◆</span>
+        <span class="cat-name">Finance</span>
+        <span class="cat-desc">Markets, central banks, economic signals</span>
+      </button>
+      <button class="cat-btn" data-cat="tech" onclick="selectCat(this)">
+        <span class="cat-icon">◇</span>
+        <span class="cat-name">Technology</span>
+        <span class="cat-desc">AI, big tech, and industry disruption</span>
+      </button>
+      <button class="cat-btn" data-cat="science" onclick="selectCat(this)">
+        <span class="cat-icon">○</span>
+        <span class="cat-name">Science</span>
+        <span class="cat-desc">Research, climate, health breakthroughs</span>
+      </button>
+      <button class="cat-btn" data-cat="custom" onclick="selectCat(this)">
+        <span class="cat-icon">⊕</span>
+        <span class="cat-name">Custom</span>
+        <span class="cat-desc">Define your own intelligence focus</span>
+      </button>
+    </div>
+
+    <div class="custom-wrap" id="customWrap">
+      <input class="custom-input" id="customInput" placeholder="e.g. semiconductor industry, US-China trade, energy transition…" />
+    </div>
+
+    <button class="generate-btn" id="generateBtn" onclick="startGeneration()">
+      Generate Today's Brief →
+    </button>
+  </div>
+</div>
+
+<!-- ══ SCREEN 2: LOADING ══ -->
+<div id="screen-loading" class="screen">
+  <div class="loading-inner">
+    <div class="loading-orb">
+      <div class="orb-ring"></div>
+      <div class="orb-ring"></div>
+      <div class="orb-ring"></div>
+      <div class="orb-dot"></div>
+    </div>
+    <div class="loading-title">Scanning the wire…</div>
+    <div class="loading-step" id="loadingStep">Connecting to live sources</div>
+    <div class="loading-bar-wrap">
+      <div class="loading-bar-fill" id="loadingBar"></div>
+    </div>
+    <div class="loading-sources" id="loadingSources"></div>
+  </div>
+</div>
+
+<!-- ══ SCREEN 3: RESULTS ══ -->
+<div id="screen-results" class="screen">
+
+  <div class="results-header">
+    <div class="results-brand">Morning <span>Brief</span></div>
+    <div class="results-meta" id="resultsMeta">—</div>
+    <div class="live-dot">LIVE</div>
+    <button class="header-back" onclick="goHome()">← New Brief</button>
+  </div>
+
+  <div class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab('brief', this)">The Brief</button>
+    <button class="tab-btn" onclick="switchTab('podcast', this)">Podcast</button>
+    <button class="tab-btn" onclick="switchTab('insights', this)">Insights</button>
+  </div>
+
+  <!-- TAB: BRIEF -->
+  <div id="tab-brief" class="tab-panel active">
+    <div class="brief-layout">
+      <div class="brief-main">
+        <div class="brief-kicker" id="briefKicker">—</div>
+        <h1 class="brief-headline" id="briefHeadline">—</h1>
+        <p class="brief-lede" id="briefLede">—</p>
+        <div id="briefStories"></div>
+      </div>
+      <div class="brief-sidebar">
+        <div>
+          <div class="sidebar-section-label">Sources</div>
+          <div class="source-list" id="sourceList">
+            <div class="source-item">—</div>
+          </div>
+        </div>
+        <div>
+          <div class="sidebar-section-label">Ask the Brief</div>
+          <div class="qa-messages" id="qaMessages">
+            <div class="qa-msg">
+              <div class="qa-role">System</div>
+              <div class="qa-bubble">Ask me anything about today's stories.</div>
+            </div>
+          </div>
+          <div class="qa-input-row">
+            <input class="qa-input" id="qaInput" placeholder="Your question…" onkeydown="handleQaKey(event)">
+            <button class="qa-send" id="qaSend" onclick="sendQa()">Ask</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: PODCAST -->
+  <div id="tab-podcast" class="tab-panel">
+    <div class="podcast-layout">
+      <div class="podcast-header">
+        <div class="podcast-kicker">Audio Edition</div>
+        <div class="podcast-title">Morning Brief Podcast</div>
+        <div class="podcast-subtitle">Narrative storytelling — your news, not a bulletin board.</div>
+      </div>
+
+      <div class="podcast-settings">
+        <div class="setting-group">
+          <div class="setting-label">Voice</div>
+          <select class="setting-select" id="voiceSelect">
+            <option value="Charon">Charon — Deep, authoritative</option>
+            <option value="Puck">Puck — Energetic, clear</option>
+            <option value="Kore">Kore — Professional, female</option>
+            <option value="Aoede">Aoede — Warm, conversational</option>
+            <option value="Fenrir">Fenrir — Bold, grounded</option>
+          </select>
+        </div>
+        <div class="setting-group">
+          <div class="setting-label">Stories</div>
+          <select class="setting-select" id="podDepth">
+            <option value="2">2 — Deep dive</option>
+            <option value="3" selected>3 — Balanced</option>
+            <option value="4">4 — Wider coverage</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="gen-progress" id="genProgress">
+        <div class="gen-progress-label" id="genProgressLabel">Writing script…</div>
+        <div class="gen-progress-bar"><div class="gen-progress-fill" id="genProgressFill"></div></div>
+      </div>
+
+      <button class="gen-podcast-btn" id="genPodcastBtn" onclick="generatePodcast()">
+        <span class="btn-icon">▶</span> Generate Podcast Episode
+      </button>
+
+      <div class="player-card" id="playerCard" style="display:none;">
+        <div class="player-status" id="playerStatus">READY TO PLAY</div>
+        <div class="player-controls">
+          <button class="play-circle" onclick="togglePlay()">
+            <svg id="playIcon" viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>
+          </button>
+          <div class="player-info">
+            <div class="player-track" id="playerTrack">Morning Brief</div>
+            <div class="player-time" id="playerTime">0:00 / 0:00</div>
+          </div>
+          <a id="downloadLink" class="player-download" download="morning-brief.wav">↓ WAV</a>
+        </div>
+        <div class="progress-track" onclick="seekAudio(event)">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: INSIGHTS -->
+  <div id="tab-insights" class="tab-panel">
+    <div class="insights-layout">
+      <div class="insights-header">
+        <div class="insights-kicker">Intelligence Analysis</div>
+        <div class="insights-title">Key Takeaways</div>
+        <div class="insights-sub">What the stories mean — beyond the headlines.</div>
+      </div>
+
+      <button class="gen-insights-btn" id="genInsightsBtn" onclick="generateInsights()">
+        <span>✦</span> Extract Insights
+      </button>
+
+      <div class="insights-list" id="insightsList"></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+<audio id="audioEl" style="display:none;"></audio>
+
+<script>
+const WORKER = "https://young-silence-3c76.jeongdael00.workers.dev/";
+const KEY_INDEX = 2;
+const MODEL = "gemini-2.5-flash";
+
+let briefData = null;
+let chatHistory = [];
+
+// ── Init ──
+(function() {
+  const now = new Date();
+  document.getElementById("homeDateText").textContent =
+    now.toLocaleDateString("en-US", { weekday:"long", year:"numeric", month:"long", day:"numeric" });
+})();
+
+// ── Screen management ──
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById("screen-" + id).classList.add("active");
+}
+
+// ── Category selection ──
+let selectedCat = "general";
+function selectCat(el) {
+  document.querySelectorAll(".cat-btn").forEach(b => b.classList.remove("selected"));
+  el.classList.add("selected");
+  selectedCat = el.dataset.cat;
+  const customWrap = document.getElementById("customWrap");
+  if (selectedCat === "custom") {
+    customWrap.classList.add("visible");
+    setTimeout(() => document.getElementById("customInput").focus(), 100);
+  } else {
+    customWrap.classList.remove("visible");
+  }
+}
+
+// ── Tab switching ──
+function switchTab(name, btn) {
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+  btn.classList.add("active");
+  document.getElementById("tab-" + name).classList.add("active");
+}
+
+// ── API calls ──
+async function callGemini(prompt, system, useSearch) {
+  useSearch = useSearch || false;
+  const res = await fetch(WORKER, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      prompt: prompt,
+      systemInstruction: system,
+      model: MODEL,
+      keyIndex: KEY_INDEX,
+      useSearch: useSearch
+    })
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error("HTTP " + res.status + ": " + t.slice(0, 300));
+  }
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error("No text in response: " + JSON.stringify(data).slice(0, 200));
+  const chunks = data?.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+  const sources = chunks.map(c => c.web?.title || c.web?.uri).filter(Boolean);
+  return { text, sources };
+}
+
+async function callTTS(text, voiceName) {
+  const res = await fetch(WORKER, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt: text, mode: "tts", keyIndex: KEY_INDEX, ttsConfig: { voiceName } })
+  });
+  if (!res.ok) throw new Error("TTS HTTP " + res.status);
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  return data;
+}
+
+// ── Loading progress helper ──
+function setLoading(pct, step) {
+  document.getElementById("loadingBar").style.width = pct + "%";
+  document.getElementById("loadingStep").textContent = step;
+}
+
+function addLoadingSource(text) {
+  const el = document.getElementById("loadingSources");
+  const span = document.createElement("span");
+  span.textContent = text;
+  el.appendChild(span);
+}
+
+// ── Generate Brief ──
+async function startGeneration() {
+  const catNames = {
+    general: "World News", geopolitics: "Geopolitics",
+    finance: "Finance & Markets", tech: "Technology & AI",
+    science: "Science & Health"
+  };
+
+  let topic;
+  if (selectedCat === "custom") {
+    topic = document.getElementById("customInput").value.trim() || "general world news";
+  } else {
+    topic = catNames[selectedCat];
+  }
+
+  document.getElementById("loadingSources").innerHTML = "";
+  showScreen("loading");
+  setLoading(5, "Initializing intelligence scan…");
+
+  const steps = [
+    [15, "Querying live international sources…"],
+    [30, "Scanning Reuters, AP, BBC, FT, Bloomberg…"],
+    [50, "Processing overnight developments…"],
+    [70, "Synthesizing key narratives…"],
+    [85, "Structuring your brief…"],
+  ];
+
+  let stepIdx = 0;
+  const stepTimer = setInterval(() => {
+    if (stepIdx < steps.length) {
+      setLoading(...steps[stepIdx]);
+      if (stepIdx === 1) {
+        ["REUTERS", "BBC", "FT", "BLOOMBERG", "AP", "WSJ"].forEach((s, i) =>
+          setTimeout(() => addLoadingSource(s), i * 200)
+        );
+      }
+      stepIdx++;
+    }
+  }, 1200);
+
+  const system = "You are a senior international news editor. Today is " + new Date().toDateString() + ".\n" +
+    "Draw from major international outlets: Reuters, AP, BBC, NYT, FT, Bloomberg, WSJ, The Economist, Foreign Policy.\n" +
+    "Prioritize substantive stories with geopolitical, economic, or technological significance.\n" +
+    "Be specific: names, figures, dates. Write authoritatively. Respond ONLY in English.";
+
+  const prompt = 'Search for the most significant international news from the past 24 hours on: "' + topic + '".\n\n' +
+    "Return ONLY valid JSON, no markdown, no preamble:\n" +
+    '{"title":"Compelling headline","summary":"One sharp sentence capturing the day","sections":[{"label":"SECTION TAG","headline":"Specific factual headline","body":"3 substantial paragraphs of factual reporting. Include specific names of officials, companies, countries. Include concrete numbers, percentages, dollar figures. Context → what happened → why it matters. ~180 words per section."}]}\n\n' +
+    "Include exactly 5 sections. Stories must be from the past 24-48 hours.\n" +
+    "Prioritize: geopolitical shifts, market-moving news, major policy decisions, significant technological developments.\n" +
+    "Be specific and factual. Do not fabricate details.";
+
+  try {
+    const { text: raw, sources } = await callGemini(prompt, system, true);
+
+    const cleaned = raw.replace(/```json\s*/gi, "").replace(/```\s*/gi, "").trim();
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error("Could not parse response: " + raw.slice(0, 200));
+    const brief = JSON.parse(match[0]);
+
+    clearInterval(stepTimer);
+    setLoading(100, "Brief ready.");
+    briefData = { brief, sources, topic };
+
+    setTimeout(() => {
+      renderResults(brief, sources, topic);
+      showScreen("results");
+    }, 600);
+
+  } catch(e) {
+    clearInterval(stepTimer);
+    setLoading(0, "Error: " + e.message);
+    showToast("Failed: " + e.message);
+    setTimeout(() => showScreen("home"), 3000);
+  }
+}
+
+function renderResults(brief, sources, topic) {
+  const now = new Date();
+  document.getElementById("resultsMeta").textContent =
+    topic + "  ·  " + now.toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" }) +
+    "  ·  " + now.toLocaleTimeString("en-US", { hour:"2-digit", minute:"2-digit" });
+
+  document.getElementById("briefKicker").textContent = topic.toUpperCase() + " — " +
+    now.toLocaleDateString("en-US", { weekday:"long", month:"long", day:"numeric" }).toUpperCase();
+  document.getElementById("briefHeadline").textContent = brief.title || "Today's Brief";
+  document.getElementById("briefLede").textContent = brief.summary || "";
+
+  // Stories
+  const container = document.getElementById("briefStories");
+  container.innerHTML = "";
+  (brief.sections || []).forEach((sec, i) => {
+    const div = document.createElement("div");
+    div.className = "story";
+    div.innerHTML =
+      '<div class="story-tag">' + esc(sec.label || "") + '</div>' +
+      '<div class="story-headline">' + esc(sec.headline || "") + '</div>' +
+      '<div class="story-body">' +
+        (sec.body || "").split(/\n\n+/).map(p => "<p>" + esc(p) + "</p>").join("") +
+      '</div>';
+    container.appendChild(div);
+    setTimeout(() => div.classList.add("revealed"), 100 + 150 * i);
+  });
+
+  // Sources
+  const srcList = document.getElementById("sourceList");
+  const uniq = [...new Set(sources)].slice(0, 10);
+  if (uniq.length) {
+    srcList.innerHTML = uniq.map(s => '<div class="source-item">' + esc(s.length > 40 ? s.slice(0, 40) + "…" : s) + '</div>').join("");
+  }
+
+  // Reset tabs
+  document.getElementById("playerCard").style.display = "none";
+  document.getElementById("insightsList").innerHTML = "";
+  document.getElementById("qaMessages").innerHTML =
+    '<div class="qa-msg"><div class="qa-role">System</div><div class="qa-bubble">Ask me anything about today\'s stories.</div></div>';
+  chatHistory = [];
+}
+
+// ── Podcast ──
+async function generatePodcast() {
+  if (!briefData) return;
+  const btn = document.getElementById("genPodcastBtn");
+  btn.disabled = true;
+
+  const voice = document.getElementById("voiceSelect").value;
+  const storyCount = parseInt(document.getElementById("podDepth").value);
+  const topStories = (briefData.brief.sections || []).slice(0, storyCount);
+
+  function setProgress(pct, label) {
+    document.getElementById("genProgress").classList.add("visible");
+    document.getElementById("genProgressLabel").textContent = label;
+    document.getElementById("genProgressFill").style.width = pct + "%";
+  }
+
+  const system = "You are a celebrated narrative podcast host — intelligent, dry wit, deeply informed.\n" +
+    "You are NOT a news anchor. You are a storyteller who happens to cover news.\n" +
+    "Think: the intimacy of 'Radiolab', the intelligence of 'The Economist', the pace of 'Hardcore History' (condensed).";
+
+  const storiesText = topStories.map((s, i) =>
+    "STORY " + (i+1) + ":\nHeadline: " + s.headline + "\n" + s.body
+  ).join("\n\n---\n\n");
+
+  const scriptPrompt =
+    "Write a morning news podcast script for 'Morning Brief'.\n" +
+    "Date: " + new Date().toDateString() + "\n\n" +
+    "Source material:\n" + storiesText + "\n\n" +
+    "═══ SCRIPT REQUIREMENTS ═══\n\n" +
+    "OPENING (30-40 words):\n" +
+    "- Open with a single, arresting observation or question that pulls the listener in\n" +
+    "- NOT 'Good morning' — something that makes you think 'wait, tell me more'\n" +
+    "- Then briefly set the scene for what today holds\n\n" +
+    "FOR EACH OF THE " + storyCount + " STORIES:\n" +
+    "- Begin with a narrative hook — a moment, a detail, a paradox, a human angle\n" +
+    "- Build the story: context → development → stakes → what to watch\n" +
+    "- Use the texture of good longform journalism — specific scenes, specific numbers\n" +
+    "- Transitions should feel earned, not mechanical ('Moving on' is banned)\n" +
+    "- Find the angle that makes this story genuinely interesting, not just important\n\n" +
+    "CLOSING (20-30 words):\n" +
+    "- One thought that lingers. A question the day leaves open. Not a summary.\n\n" +
+    "═══ VOICE & STYLE ═══\n" +
+    "- Write entirely for the ear. Read it aloud mentally as you write.\n" +
+    "- Use natural English rhythm: contractions, varied sentence length, rhetorical questions\n" +
+    "- Em-dashes (—) for beats and asides. Ellipses for deliberate pauses.\n" +
+    "- Dry, understated intelligence is welcome. Forced humor is not.\n" +
+    "- No jargon. No passive voice. No filler.\n" +
+    "- Speak to ONE intelligent adult who has 8 minutes and a cup of coffee.\n\n" +
+    "TARGET: 700-850 words. Return ONLY the spoken script text — nothing else.";
+
+  try {
+    setProgress(20, "Writing narrative script…");
+    const { text: script } = await callGemini(scriptPrompt, system, false);
+
+    setProgress(55, "Generating voice: " + voice + "…");
+    const ttsResult = await callTTS(script, voice);
+    if (!ttsResult.audioData) throw new Error("No audio data returned.");
+
+    setProgress(85, "Processing audio…");
+    const binary = atob(ttsResult.audioData);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const blob = new Blob([bytes], { type: ttsResult.mimeType || "audio/wav" });
+    const url = URL.createObjectURL(blob);
+
+    document.getElementById("audioEl").src = url;
+    document.getElementById("downloadLink").href = url;
+    document.getElementById("playerTrack").textContent =
+      "Morning Brief · " + voice + " · " + new Date().toLocaleDateString("en-US", { month:"short", day:"numeric" });
+    document.getElementById("playerStatus").textContent = "READY — " + storyCount + " STORIES";
+    document.getElementById("playerCard").style.display = "block";
+
+    setupAudio();
+    setProgress(100, "Done");
+    setTimeout(() => document.getElementById("genProgress").classList.remove("visible"), 800);
+    showToast("Podcast ready");
+
+  } catch(e) {
+    showToast("Podcast error: " + e.message);
+    document.getElementById("genProgress").classList.remove("visible");
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function setupAudio() {
+  const audio = document.getElementById("audioEl");
+  audio.ontimeupdate = () => {
+    const pct = audio.duration ? (audio.currentTime / audio.duration * 100) : 0;
+    document.getElementById("progressFill").style.width = pct + "%";
+    document.getElementById("playerTime").textContent =
+      fmt(audio.currentTime) + " / " + fmt(audio.duration || 0);
+  };
+  audio.onended = () => {
+    document.getElementById("playIcon").innerHTML = '<polygon points="5,3 19,12 5,21"/>';
+  };
+}
+
+function togglePlay() {
+  const audio = document.getElementById("audioEl");
+  if (audio.paused) {
+    audio.play();
+    document.getElementById("playIcon").innerHTML = '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
+  } else {
+    audio.pause();
+    document.getElementById("playIcon").innerHTML = '<polygon points="5,3 19,12 5,21"/>';
+  }
+}
+
+function seekAudio(e) {
+  const audio = document.getElementById("audioEl");
+  if (!audio.duration) return;
+  audio.currentTime = (e.offsetX / e.currentTarget.offsetWidth) * audio.duration;
+}
+
+function fmt(s) {
+  if (!s || isNaN(s)) return "0:00";
+  return Math.floor(s / 60) + ":" + Math.floor(s % 60).toString().padStart(2, "0");
+}
+
+// ── Insights ──
+async function generateInsights() {
+  const btn = document.getElementById("genInsightsBtn");
+  btn.disabled = true;
+  if (!briefData) { btn.disabled = false; return; }
+
+  const system = "You are a senior strategic analyst at a respected think tank. You write for intelligent, informed adults.\n" +
+    "Extract insights that go beyond headlines — implications, second-order effects, historical parallels, what to watch.";
+
+  const prompt =
+    "From this news brief, produce 6 key insights.\n\n" +
+    "Each insight must be a structured object with:\n" +
+    '- "headline": A sharp, specific 10-15 word observation (not a news headline — an analytical claim)\n' +
+    '- "detail": 2-3 sentences that explain the implication, context, or why this matters. Analytical, not descriptive.\n\n' +
+    "AVOID: restating facts from the brief. INSTEAD: draw implications, flag tensions, identify patterns.\n" +
+    "Write as if briefing a senior decision-maker who already knows the news.\n\n" +
+    "Return ONLY a JSON array. No markdown.\n" +
+    'Format: [{"headline":"...","detail":"..."}]\n\n' +
+    "Brief: " + JSON.stringify(briefData.brief);
+
+  try {
+    const { text } = await callGemini(prompt, system, false);
+    const match = text.match(/\[[\s\S]*\]/);
+    if (!match) throw new Error("Parse error");
+    const insights = JSON.parse(match[0]);
+
+    const list = document.getElementById("insightsList");
+    list.innerHTML = "";
+    insights.forEach((ins, i) => {
+      const div = document.createElement("div");
+      div.className = "insight-card";
+      div.innerHTML =
+        '<div class="insight-num">0' + (i + 1) + '</div>' +
+        '<div class="insight-text">' + esc(ins.headline || ins) + '</div>' +
+        (ins.detail ? '<div class="insight-detail">' + esc(ins.detail) + '</div>' : '');
+      list.appendChild(div);
+      setTimeout(() => div.classList.add("revealed"), 80 * i);
+    });
+    showToast("Insights extracted");
+
+  } catch(e) {
+    showToast("Error: " + e.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── Q&A ──
+function handleQaKey(e) {
+  if (e.key === "Enter") sendQa();
+}
+
+async function sendQa() {
+  const input = document.getElementById("qaInput");
+  const q = input.value.trim();
+  if (!q || !briefData) return;
+  input.value = "";
+  document.getElementById("qaSend").disabled = true;
+
+  addQaMsg("You", q, "user");
+  chatHistory.push({ role: "user", content: q });
+
+  const system = "You are a sharp news analyst. Answer questions about this morning brief concisely and insightfully.\n" +
+    "Be direct. Give context when useful. Don't over-explain.\nBrief: " + JSON.stringify(briefData.brief);
+  const hist = chatHistory.map(m => (m.role === "user" ? "Q: " : "A: ") + m.content).join("\n");
+
+  try {
+    const { text } = await callGemini(hist, system, false);
+    addQaMsg("Brief AI", text, "assistant");
+    chatHistory.push({ role: "assistant", content: text });
+  } catch(e) {
+    addQaMsg("Error", e.message, "assistant");
+  } finally {
+    document.getElementById("qaSend").disabled = false;
+  }
+}
+
+function addQaMsg(role, text, type) {
+  const msgs = document.getElementById("qaMessages");
+  const div = document.createElement("div");
+  div.className = "qa-msg " + type;
+  div.innerHTML = '<div class="qa-role">' + esc(role) + '</div><div class="qa-bubble">' + esc(text) + '</div>';
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+// ── Navigation ──
+function goHome() {
+  const audio = document.getElementById("audioEl");
+  audio.pause(); audio.src = "";
+  briefData = null;
+  chatHistory = [];
+  showScreen("home");
+  // Reset tabs
+  document.querySelectorAll(".tab-btn").forEach((b,i) => b.classList.toggle("active", i===0));
+  document.querySelectorAll(".tab-panel").forEach((p,i) => p.classList.toggle("active", i===0));
+}
+
+// ── Utilities ──
+function esc(s) {
+  return String(s)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 3000);
+}
+</script>
+</body>
+</html>
