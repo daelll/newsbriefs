@@ -1212,42 +1212,53 @@ body::before {
     <div class="tg-section">
       <div class="tg-toggle" onclick="toggleTgPanel()">
         <span class="tg-toggle-icon">✈</span>
-        <span class="tg-toggle-label">Telegram Auto-Send</span>
-        <span class="tg-toggle-status" id="tgStatus">Not configured</span>
+        <span class="tg-toggle-label">Telegram</span>
+        <span class="tg-toggle-status" id="tgStatus">Ready</span>
         <span class="tg-toggle-arrow" id="tgArrow">›</span>
       </div>
       <div class="tg-panel" id="tgPanel">
-        <div class="tg-row">
-          <div class="tg-field">
-            <label class="tg-label">Bot Token</label>
-            <input class="tg-input" id="tgToken" type="password" placeholder="1234567890:AAxxxxxxxx…" oninput="saveTgConfig()">
-          </div>
-          <div class="tg-field">
-            <label class="tg-label">Chat ID</label>
-            <input class="tg-input" id="tgChatId" placeholder="-1001234567890" oninput="saveTgConfig()">
-          </div>
-        </div>
         <div class="tg-row">
           <div class="tg-field">
             <label class="tg-label">Daily send time (KST)</label>
             <input class="tg-input" id="tgTime" type="time" value="06:00" oninput="saveTgConfig()">
           </div>
           <div class="tg-field">
-            <label class="tg-label">Send</label>
-            <div style="display:flex;gap:0.5rem;margin-top:0.35rem;">
+            <label class="tg-label">Include</label>
+            <div style="display:flex;gap:0.75rem;margin-top:0.4rem;">
               <label class="tg-check"><input type="checkbox" id="tgSendBrief" checked onchange="saveTgConfig()"> Brief</label>
               <label class="tg-check"><input type="checkbox" id="tgSendPodcast" checked onchange="saveTgConfig()"> Podcast</label>
             </div>
           </div>
         </div>
-        <div class="tg-actions">
-          <button class="tg-btn" onclick="testTelegram()">⚡ Test Send</button>
-          <button class="tg-btn tg-btn-primary" onclick="enableSchedule()" id="scheduleBtn">Enable Daily Schedule</button>
+        <div class="tg-row" style="margin-bottom:0;">
+          <div class="tg-field">
+            <label class="tg-label">Voice</label>
+            <select class="tg-input" id="voiceSelectTg" style="cursor:pointer;">
+              <option value="Charon">Charon — Deep</option>
+              <option value="Puck">Puck — Energetic</option>
+              <option value="Kore">Kore — Professional</option>
+              <option value="Aoede">Aoede — Warm</option>
+              <option value="Fenrir">Fenrir — Bold</option>
+            </select>
+          </div>
+          <div class="tg-field">
+            <label class="tg-label">Stories in podcast</label>
+            <select class="tg-input" id="podDepthTg" style="cursor:pointer;">
+              <option value="2">2 — Deep dive</option>
+              <option value="3" selected>3 — Balanced</option>
+              <option value="4">4 — Wide</option>
+            </select>
+          </div>
         </div>
-        <div class="tg-note">
-          How to get these: <strong>Bot Token</strong> → talk to @BotFather on Telegram → /newbot.<br>
-          <strong>Chat ID</strong> → add your bot to a channel, then send a message and visit:<br>
-          <code>https://api.telegram.org/bot&lt;TOKEN&gt;/getUpdates</code>
+        <div class="tg-actions" style="margin-top:1rem;">
+          <button class="tg-btn" id="sendNowBtn" onclick="sendNow()">▶ Send Now</button>
+          <button class="tg-btn" onclick="testTelegram()">⚡ Test Connection</button>
+          <button class="tg-btn tg-btn-primary" onclick="enableSchedule()" id="scheduleBtn">Enable 06:00 KST Schedule</button>
+        </div>
+        <div class="tg-note" style="margin-top:0.75rem;">
+          <strong>Send Now</strong> — generates fresh brief + podcast for selected category and sends immediately.<br>
+          <strong>Schedule</strong> — auto-sends daily at set time. Keep this tab open for scheduling to work.<br>
+          Token &amp; Chat ID are stored securely in your Cloudflare Worker environment variables.
         </div>
       </div>
     </div>
@@ -1402,12 +1413,14 @@ body::before {
 <audio id="audioEl" style="display:none;"></audio>
 
 <script>
-const WORKER = "https://young-silence-3c76.jeongdael00.workers.dev/";
+const WORKER = "https://nameless-math-87ca.jeongdael00.workers.dev/";
 const KEY_INDEX = 2;
 const MODEL = "gemini-2.5-flash";
 
 let briefData = null;
 let chatHistory = [];
+let lastAudioBlob = null;
+let lastAudioBase64 = null;
 
 // ── Init ──
 (function() {
@@ -1482,6 +1495,41 @@ async function callTTS(text, voiceName) {
   const data = await res.json();
   if (data.error) throw new Error(data.error);
   return data;
+}
+
+// Gemini TTS returns raw PCM (24kHz, 16-bit, mono) — must wrap in WAV header
+function pcmToWav(base64pcm) {
+  const raw = atob(base64pcm);
+  const pcmBytes = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) pcmBytes[i] = raw.charCodeAt(i);
+
+  const sampleRate = 24000;
+  const numChannels = 1;
+  const bitsPerSample = 16;
+  const byteRate = sampleRate * numChannels * bitsPerSample / 8;
+  const blockAlign = numChannels * bitsPerSample / 8;
+  const dataSize = pcmBytes.length;
+  const buffer = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buffer);
+
+  function writeStr(offset, str) {
+    for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+  }
+  writeStr(0, "RIFF");
+  view.setUint32(4, 36 + dataSize, true);
+  writeStr(8, "WAVE");
+  writeStr(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, byteRate, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, bitsPerSample, true);
+  writeStr(36, "data");
+  view.setUint32(40, dataSize, true);
+  new Uint8Array(buffer).set(pcmBytes, 44);
+  return new Blob([buffer], { type: "audio/wav" });
 }
 
 // ── Loading progress helper ──
@@ -1694,13 +1742,25 @@ async function generatePodcast() {
     if (!ttsResult.audioData) throw new Error("No audio data returned.");
 
     setProgress(85, "Processing audio…");
-    const binary = atob(ttsResult.audioData);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    const blob = new Blob([bytes], { type: ttsResult.mimeType || "audio/wav" });
-    const url = URL.createObjectURL(blob);
 
-    document.getElementById("audioEl").src = url;
+    // Build proper WAV from raw PCM
+    const wavBlob = pcmToWav(ttsResult.audioData);
+    const url = URL.createObjectURL(wavBlob);
+
+    // Store for telegram sending
+    lastAudioBlob = wavBlob;
+    lastAudioBase64 = ttsResult.audioData;
+
+    const audio = document.getElementById("audioEl");
+    audio.src = url;
+    // Force load before play attempt
+    await new Promise(resolve => {
+      audio.oncanplay = resolve;
+      audio.onerror = resolve;
+      audio.load();
+      setTimeout(resolve, 3000); // fallback
+    });
+
     document.getElementById("downloadLink").href = url;
     document.getElementById("playerTrack").textContent =
       "Morning Brief · " + voice + " · " + new Date().toLocaleDateString("en-US", { month:"short", day:"numeric" });
@@ -1710,7 +1770,7 @@ async function generatePodcast() {
     setupAudio();
     setProgress(100, "Done");
     setTimeout(() => document.getElementById("genProgress").classList.remove("visible"), 800);
-    showToast("Podcast ready");
+    showToast("Podcast ready — press play ▶");
 
   } catch(e) {
     showToast("Podcast error: " + e.message);
@@ -1868,12 +1928,129 @@ function showToast(msg) {
 }
 
 // ── TELEGRAM ──────────────────────────────────────────────────
+// All requests go through Cloudflare Worker which holds TG_TOKEN + TG_CHAT_ID securely
+
+async function sendViaTelegramWorker(telegramText, audioBase64) {
+  const res = await fetch(WORKER, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      telegramMode: true,
+      keyIndex: KEY_INDEX,
+      telegramText: telegramText || null,
+      telegramAudio: audioBase64 || null
+    })
+  });
+  if (!res.ok) throw new Error("Worker HTTP " + res.status);
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  return data;
+}
+
+function buildTelegramText(brief, topic) {
+  let msg = "<b>🗞 Morning Brief — " + topic + "</b>\n";
+  msg += new Date().toLocaleDateString("en-US", { weekday:"long", month:"long", day:"numeric" }) + "\n\n";
+  msg += "<i>" + (brief.summary || "") + "</i>\n\n";
+  (brief.sections || []).forEach(sec => {
+    msg += "━━━━━━━━━━\n";
+    msg += "<b>[" + (sec.label || "") + "]</b> " + (sec.headline || "") + "\n";
+    if (sec.context) msg += "<i>" + sec.context + "</i>\n";
+    if (Array.isArray(sec.bullets)) {
+      sec.bullets.forEach(b => { msg += "• " + b + "\n"; });
+    }
+    if (sec.significance) msg += "↳ " + sec.significance + "\n";
+    msg += "\n";
+  });
+  msg += "━━━━━━━━━━\n<i>Morning Brief AI · " + new Date().toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"}) + "</i>";
+  // Telegram message limit: 4096 chars
+  return msg.slice(0, 4090);
+}
+
+// ── Send Now (manual trigger from home screen) ──
+async function sendNow() {
+  const btn = document.getElementById("sendNowBtn");
+  btn.disabled = true;
+  btn.textContent = "Generating…";
+
+  const catNames = { general:"World News", geopolitics:"Geopolitics", finance:"Finance & Markets", tech:"Technology & AI", science:"Science & Health" };
+  const topic = catNames[selectedCat] || "World News";
+  const sendPodcast = document.getElementById("tgSendPodcast").checked;
+  const tgVoice = document.getElementById("voiceSelectTg").value;
+  const tgDepth = parseInt(document.getElementById("podDepthTg").value);
+
+  try {
+    // 1. Generate Brief
+    btn.textContent = "Fetching news…";
+    const system = "You are a senior international news editor. Today is " + new Date().toDateString() + ". Draw from Reuters, AP, BBC, FT, Bloomberg, WSJ. Be specific: names, figures, dates. Respond ONLY in English.";
+    const prompt = 'Search for the most significant international news from the past 24 hours on: "' + topic + '". Return ONLY valid JSON, no markdown: {"title":"headline","summary":"one sentence","sections":[{"label":"TAG","headline":"headline","context":"1-2 sentence background","bullets":["specific fact with names/numbers","another key development","consequence or reaction","what to watch"],"significance":"why this matters strategically"}]} Include 5 sections.';
+    const { text: raw } = await callGemini(prompt, system, true);
+    const match = raw.replace(/```json\s*/gi,"").replace(/```\s*/gi,"").match(/\{[\s\S]*\}/);
+    if (!match) throw new Error("Brief parse failed");
+    const brief = JSON.parse(match[0]);
+    const tgText = buildTelegramText(brief, topic);
+
+    // 2. Generate Podcast if enabled
+    let audioBase64 = null;
+    if (sendPodcast) {
+      btn.textContent = "Writing podcast script…";
+      const voice = tgVoice;
+      const storyCount = tgDepth;
+      const topStories = (brief.sections || []).slice(0, storyCount);
+      const storiesText = topStories.map((s,i) => "STORY "+(i+1)+": "+s.headline+"\n"+(s.bullets||[]).join(". ")).join("\n\n---\n\n");
+
+      const podSystem = "You are an award-winning narrative podcast host. Intelligent, warm, dry wit. NOT a news anchor — a storyteller. Think NPR meets The Economist.";
+      const podPrompt = "Write a morning news podcast script for 'Morning Brief'.\nDate: " + new Date().toDateString() + "\nStories:\n" + storiesText + "\n\nOPENING: One arresting sentence (not 'Good morning'). Then frame the day.\nEACH STORY: Hook → context → what happened → stakes → what to watch. Narrative arc, not bullet reading.\nTRANSITIONS: Earned, not mechanical. Never 'Moving on'.\nCLOSING: One lingering thought or open question.\nSTYLE: Write for the ear. Contractions, varied sentence length, em-dashes for pauses. Dry irony welcome, forced jokes forbidden.\nTARGET: 700-850 words. Return ONLY the spoken script.";
+      const { text: script } = await callGemini(podPrompt, podSystem, false);
+
+      btn.textContent = "Generating voice…";
+      const ttsResult = await callTTS(script, voice);
+      if (!ttsResult.audioData) throw new Error("No audio data");
+      audioBase64 = ttsResult.audioData;
+
+      // Also update local player
+      lastAudioBase64 = audioBase64;
+      lastAudioBlob = pcmToWav(audioBase64);
+    }
+
+    // 3. Send via Worker
+    btn.textContent = "Sending to Telegram…";
+    await sendViaTelegramWorker(
+      document.getElementById("tgSendBrief").checked ? tgText : null,
+      audioBase64
+    );
+
+    showToast("✓ Sent to Telegram!");
+    btn.textContent = "✓ Sent";
+    setTimeout(() => { btn.textContent = "Send Now"; btn.disabled = false; }, 3000);
+
+  } catch(e) {
+    showToast("Send failed: " + e.message);
+    btn.textContent = "Send Now";
+    btn.disabled = false;
+  }
+}
+
+// ── Test connection ──
+async function testTelegram() {
+  const btn = document.querySelector(".tg-btn");
+  btn.textContent = "Testing…";
+  try {
+    await sendViaTelegramWorker("✅ Morning Brief connected!\n\nTelegram integration is working. Daily briefs will be sent as scheduled.", null);
+    showToast("Test message sent ✓");
+  } catch(e) {
+    showToast("Test failed: " + e.message);
+  } finally {
+    btn.textContent = "⚡ Test Connection";
+  }
+}
+
+// ── Settings persistence (time + checkboxes only — no token/ID needed) ──
 (function loadTgConfig() {
   try {
     const cfg = JSON.parse(localStorage.getItem("tg_config") || "{}");
-    if (cfg.token) document.getElementById("tgToken").value = cfg.token;
-    if (cfg.chatId) document.getElementById("tgChatId").value = cfg.chatId;
     if (cfg.time) document.getElementById("tgTime").value = cfg.time;
+    if (cfg.voice) document.getElementById("voiceSelectTg").value = cfg.voice;
+    if (cfg.depth) document.getElementById("podDepthTg").value = cfg.depth;
     if (cfg.sendBrief !== undefined) document.getElementById("tgSendBrief").checked = cfg.sendBrief;
     if (cfg.sendPodcast !== undefined) document.getElementById("tgSendPodcast").checked = cfg.sendPodcast;
     updateTgStatus();
@@ -1882,9 +2059,9 @@ function showToast(msg) {
 
 function saveTgConfig() {
   const cfg = {
-    token: document.getElementById("tgToken").value,
-    chatId: document.getElementById("tgChatId").value,
     time: document.getElementById("tgTime").value,
+    voice: document.getElementById("voiceSelectTg").value,
+    depth: document.getElementById("podDepthTg").value,
     sendBrief: document.getElementById("tgSendBrief").checked,
     sendPodcast: document.getElementById("tgSendPodcast").checked,
   };
@@ -1893,15 +2070,16 @@ function saveTgConfig() {
 }
 
 function updateTgStatus() {
-  const cfg = JSON.parse(localStorage.getItem("tg_config") || "{}");
-  const el = document.getElementById("tgStatus");
   const scheduled = localStorage.getItem("tg_scheduled") === "true";
-  if (cfg.token && cfg.chatId) {
-    el.textContent = scheduled ? "● Scheduled " + (cfg.time || "06:00") + " KST" : "Configured — not scheduled";
-    el.style.color = scheduled ? "var(--green)" : "var(--amber)";
+  const el = document.getElementById("tgStatus");
+  const cfg = JSON.parse(localStorage.getItem("tg_config") || "{}");
+  if (scheduled) {
+    el.textContent = "● Scheduled " + (cfg.time || "06:00") + " KST";
+    el.style.color = "var(--green)";
+    document.getElementById("scheduleBtn").textContent = "✓ Schedule Active";
   } else {
-    el.textContent = "Not configured";
-    el.style.color = "var(--text-dim)";
+    el.textContent = "Ready — not scheduled";
+    el.style.color = "var(--amber)";
   }
 }
 
@@ -1912,141 +2090,35 @@ function toggleTgPanel() {
   arrow.classList.toggle("open");
 }
 
-async function sendToTelegram(text, audioBlob) {
-  const cfg = JSON.parse(localStorage.getItem("tg_config") || "{}");
-  if (!cfg.token || !cfg.chatId) throw new Error("Telegram not configured");
-
-  const base = "https://api.telegram.org/bot" + cfg.token;
-
-  // Send text brief
-  if (cfg.sendBrief !== false) {
-    const r = await fetch(base + "/sendMessage", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: cfg.chatId,
-        text: text,
-        parse_mode: "HTML",
-        disable_web_page_preview: true
-      })
-    });
-    const d = await r.json();
-    if (!d.ok) throw new Error("Telegram text error: " + d.description);
-  }
-
-  // Send audio if exists
-  if (audioBlob && cfg.sendPodcast !== false) {
-    const fd = new FormData();
-    fd.append("chat_id", cfg.chatId);
-    fd.append("audio", audioBlob, "morning-brief.wav");
-    fd.append("title", "Morning Brief Podcast");
-    fd.append("performer", "Morning Brief AI");
-    const r2 = await fetch(base + "/sendAudio", { method: "POST", body: fd });
-    const d2 = await r2.json();
-    if (!d2.ok) throw new Error("Telegram audio error: " + d2.description);
-  }
-}
-
-function buildTelegramText(brief, topic) {
-  let msg = "<b>🗞 Morning Brief — " + topic + "</b>\n";
-  msg += new Date().toLocaleDateString("en-US", { weekday:"long", month:"long", day:"numeric" }) + "\n\n";
-  msg += "<i>" + (brief.summary || "") + "</i>\n\n";
-
-  (brief.sections || []).forEach(sec => {
-    msg += "━━━━━━━━━━\n";
-    msg += "<b>" + (sec.label || "") + "</b>\n";
-    msg += "<b>" + (sec.headline || "") + "</b>\n";
-    if (sec.context) msg += "<i>" + sec.context + "</i>\n";
-    if (Array.isArray(sec.bullets)) {
-      sec.bullets.forEach(b => { msg += "• " + b + "\n"; });
-    } else if (sec.body) {
-      msg += sec.body.slice(0, 300) + "…\n";
-    }
-    if (sec.significance) msg += "↳ " + sec.significance + "\n";
-    msg += "\n";
-  });
-
-  msg += "━━━━━━━━━━\n<i>Generated by Morning Brief AI</i>";
-  return msg;
-}
-
-async function testTelegram() {
-  const cfg = JSON.parse(localStorage.getItem("tg_config") || "{}");
-  if (!cfg.token || !cfg.chatId) { showToast("Enter Bot Token and Chat ID first"); return; }
-
-  try {
-    showToast("Sending test message…");
-    await fetch("https://api.telegram.org/bot" + cfg.token + "/sendMessage", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: cfg.chatId,
-        text: "✅ Morning Brief is connected!\n\nYour daily brief will arrive at " + (cfg.time || "06:00") + " KST.",
-        parse_mode: "HTML"
-      })
-    });
-    showToast("Test message sent ✓");
-  } catch(e) {
-    showToast("Failed: " + e.message);
-  }
-}
-
-// Browser-based scheduler (runs while page is open)
+// ── Scheduler ──
 let scheduleInterval = null;
 
 function enableSchedule() {
-  const cfg = JSON.parse(localStorage.getItem("tg_config") || "{}");
-  if (!cfg.token || !cfg.chatId) { showToast("Configure Telegram first"); return; }
-
   localStorage.setItem("tg_scheduled", "true");
   updateTgStatus();
   startScheduler();
   showToast("Schedule enabled — keep this tab open");
-  document.getElementById("scheduleBtn").textContent = "✓ Schedule Active";
 }
 
 function startScheduler() {
   if (scheduleInterval) clearInterval(scheduleInterval);
   scheduleInterval = setInterval(async () => {
-    const cfg = JSON.parse(localStorage.getItem("tg_config") || "{}");
-    if (!cfg.token || !cfg.chatId || !cfg.time) return;
     if (localStorage.getItem("tg_scheduled") !== "true") return;
-
-    // Convert KST time to local check
-    const [h, m] = cfg.time.split(":").map(Number);
-    const now = new Date();
+    const cfg = JSON.parse(localStorage.getItem("tg_config") || "{}");
+    const [h, m] = (cfg.time || "06:00").split(":").map(Number);
     // KST = UTC+9
-    const kstNow = new Date(now.getTime() + 9 * 3600000);
+    const kstNow = new Date(Date.now() + 9 * 3600000);
     const todayKey = "tg_sent_" + kstNow.toISOString().slice(0, 10);
-
     if (kstNow.getUTCHours() === h && kstNow.getUTCMinutes() === m && !localStorage.getItem(todayKey)) {
       localStorage.setItem(todayKey, "1");
-      await autoSendBrief();
+      showToast("Auto-sending daily brief…");
+      await sendNow();
     }
-  }, 30000); // check every 30s
+  }, 30000);
 }
 
-async function autoSendBrief() {
-  const catNames = { general:"World News", geopolitics:"Geopolitics", finance:"Finance & Markets", tech:"Technology & AI", science:"Science & Health" };
-  const topic = catNames[selectedCat] || "World News";
+if (localStorage.getItem("tg_scheduled") === "true") { startScheduler(); updateTgStatus(); }
 
-  try {
-    const system = "You are a senior international news editor. Today is " + new Date().toDateString() + ". Draw from Reuters, AP, BBC, FT, Bloomberg. Be specific. Respond in English.";
-    const prompt = 'Search for the most significant international news from the past 24 hours. Return ONLY valid JSON: {"title":"headline","summary":"one sentence","sections":[{"label":"TAG","headline":"headline","context":"background","bullets":["fact1","fact2","fact3"],"significance":"why it matters"}]} Include 5 sections.';
-
-    const { text: raw } = await callGemini(prompt, system, true);
-    const match = raw.replace(/```json\s*/gi,"").replace(/```\s*/gi,"").match(/\{[\s\S]*\}/);
-    if (!match) return;
-    const brief = JSON.parse(match[0]);
-    const tgText = buildTelegramText(brief, topic);
-    await sendToTelegram(tgText, null);
-  } catch(e) {
-    console.error("Auto-send failed:", e);
-  }
-}
-
-// Resume scheduler on page load
-if (localStorage.getItem("tg_scheduled") === "true") startScheduler();
 </script>
 </body>
 </html>
