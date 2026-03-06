@@ -19,12 +19,12 @@
 // ══════════════════════════════════════════════════════════════
 
 const GEMINI_TEXT_MODEL = "gemini-2.5-flash";
-const GEMINI_TTS_MODEL  = "gemini-2.5-flash-preview-tts";
+const GEMINI_TTS_MODEL = "gemini-2.5-flash-preview-tts";
 const KEY_INDEX_DEFAULT = 2;
-const R2_PUBLIC_BASE    = "https://pub-cf8f191eed3d4357a77f8c51c526d31f.r2.dev";
+const R2_PUBLIC_BASE = "https://pub-cf8f191eed3d4357a77f8c51c526d31f.r2.dev";
 
 const CORS = {
-  "Access-Control-Allow-Origin":  "*",
+  "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
 };
@@ -35,12 +35,12 @@ const CORS = {
 
 export default {
   // Web app API requests
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: CORS });
     }
     try {
-      return await handleFetch(request, env);
+      return await handleFetch(request, env, ctx);
     } catch (err) {
       return jsonRes({ error: err.message }, 500);
     }
@@ -56,18 +56,34 @@ export default {
 // FETCH HANDLER — serves web app requests
 // ──────────────────────────────────────────────────────────────
 
-async function handleFetch(request, env) {
+async function handleFetch(request, env, ctx) {
   const path = new URL(request.url).pathname;
+
+  // ── BACKGROUND AUDIO WEBHOOK (Avoids 30s cron limit) ──
+  if (path === "/run-audio" && request.method === "POST") {
+    const body = await request.json();
+    if (body.secret !== env.RUN_SECRET && env.RUN_SECRET) {
+      return new Response("Unauthorized", { status: 401 });
+    }
+    // Process audio in the background where execution time is more generous
+    if (ctx && ctx.waitUntil) {
+      ctx.waitUntil(generateAndSendAudio(env, body.brief, body.topic, body.voice, body.stories, body.dateStr));
+    } else {
+      // Fallback if ctx is missing
+      generateAndSendAudio(env, body.brief, body.topic, body.voice, body.stories, body.dateStr).catch(console.error);
+    }
+    return new Response("Audio generation started in background", { status: 202, headers: CORS });
+  }
 
   // ── TEST endpoint: GET /run → manually trigger daily brief ──
   // Remove this block after confirming everything works
   if (path === "/run" && request.method === "GET") {
     const secret = new URL(request.url).searchParams.get("key");
-    if (secret !== env.RUN_SECRET) {
+    if (secret !== env.RUN_SECRET && env.RUN_SECRET) {
       return new Response("Unauthorized", { status: 401, headers: CORS });
     }
     try {
-      await runDailyBrief(env);
+      await runDailyBrief(env, request);
       return new Response("✅ Daily brief ran. Check Telegram.", {
         headers: { ...CORS, "Content-Type": "text/plain" }
       });
@@ -114,10 +130,10 @@ async function handleFetch(request, env) {
     }
   }
 
-  const body = await request.json();
+  const body = await (request.method === "POST" ? request.clone().json() : {});
   const { mode, telegramMode, prompt, systemInstruction,
-          model, keyIndex, useSearch, ttsConfig,
-          telegramText, telegramAudio } = body;
+    model, keyIndex, useSearch, ttsConfig,
+    telegramText, telegramAudio } = body;
 
   // ── Telegram send (from web app "Send Now") ──
   if (telegramMode) {
@@ -155,11 +171,11 @@ async function handleFetch(request, env) {
 // CRON: DAILY BRIEF
 // ──────────────────────────────────────────────────────────────
 
-async function runDailyBrief(env) {
-  const topic   = env.CRON_TOPIC   || "World News";
-  const voice   = env.CRON_VOICE   || "Charon";
+async function runDailyBrief(env, request = null) {
+  const topic = env.CRON_TOPIC || "World News";
+  const voice = env.CRON_VOICE || "Charon";
   const stories = parseInt(env.CRON_STORIES || "5");
-  const key     = getKey(env, KEY_INDEX_DEFAULT);
+  const key = getKey(env, KEY_INDEX_DEFAULT);
   const dateStr = new Date().toDateString();
 
   console.log(`[Cron] Starting — topic: ${topic}, voice: ${voice}, stories: ${stories}`);
@@ -184,43 +200,77 @@ async function runDailyBrief(env) {
     console.error("[Cron] Text send failed:", e.message);
   }
 
-  // ── Step 3: Generate podcast script ──────────────────────
+  // ── Step 3: Trigger Background Audio ──────────────────────
+  // Instead of blocking the cron job (which dies at 30s), we hit our own webhook
+  // using an un-awaited background fetch to trigger the webhook.
+  try {
+    const targetUrl = new URL(request ? request.url : "https://nameless-math-87ca.jeongdael00.workers.dev/run-audio");
+    targetUrl.pathname = "/run-audio";
+
+    // We intentionally don't await this so the cron returns quickly
+    fetch(targetUrl.toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        secret: env.RUN_SECRET,
+        brief,
+        topic,
+        voice,
+        stories,
+        dateStr
+      })
+    }).catch(e => console.error("Fetch background audio trigger error:", e));
+
+    console.log(`[Cron] Background audio trigger fired to ${targetUrl}`);
+  } catch (e) {
+    console.error("[Cron] Background trigger failed:", e.message);
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// BACKGROUND AUDIO GENERATION
+// ──────────────────────────────────────────────────────────────
+async function generateAndSendAudio(env, brief, topic, voice, stories, dateStr) {
+  const key = getKey(env, KEY_INDEX_DEFAULT);
+
+  // ── Step 1: Generate podcast script ──────────────────────
   let podScript;
   try {
     podScript = await generatePodcastScript(key, brief, stories, dateStr);
-    console.log(`[Cron] Podcast script ready (${podScript.length} chars)`);
+    console.log(`[AudioBg] Podcast script ready (${podScript.length} chars)`);
   } catch (e) {
-    console.error("[Cron] Podcast script failed:", e.message);
+    console.error("[AudioBg] Podcast script failed:", e.message);
+    await tgSendText(env, "⚠️ Podcast script generation failed.");
     return;
   }
 
-  // ── Step 4: Generate TTS audio ───────────────────────────
+  // ── Step 2: Generate TTS audio ───────────────────────────
   let audioBase64, audioMime;
   try {
     const ttsResult = await geminiTTS(key, podScript, voice);
     audioBase64 = ttsResult.audioData;
-    audioMime   = ttsResult.mimeType || "audio/wav";
+    audioMime = ttsResult.mimeType || "audio/wav";
     if (!audioBase64) throw new Error("Empty audio data");
-    console.log(`[Cron] TTS ready (${audioBase64.length} base64 chars), mime: ${audioMime}`);
+    console.log(`[AudioBg] TTS ready (${audioBase64.length} base64 chars), mime: ${audioMime}`);
   } catch (e) {
-    console.error("[Cron] TTS failed:", e.message);
+    console.error("[AudioBg] TTS failed:", e.message);
     await tgSendText(env, "⚠️ Podcast audio generation failed. Brief text was sent above.");
     return;
   }
 
-  // ── Step 5: Upload to R2 → get public URL ────────────────
+  // ── Step 3: Upload to R2 → get public URL ────────────────
   let audioUrl;
   try {
     const result = await uploadAudioToR2(env, audioBase64, "cron", audioMime);
     audioUrl = result.url;
-    console.log(`[Cron] Audio uploaded: ${audioUrl}`);
+    console.log(`[AudioBg] Audio uploaded: ${audioUrl}`);
   } catch (e) {
-    console.error("[Cron] R2 upload failed:", e.message);
+    console.error("[AudioBg] R2 upload failed:", e.message);
     await tgSendText(env, "⚠️ Audio upload failed. Brief text was sent above.");
     return;
   }
 
-  // ── Step 6: Send audio link to Telegram ──────────────────
+  // ── Step 4: Send audio link to Telegram ──────────────────
   try {
     const kstDate = new Date().toLocaleDateString("en-US", {
       timeZone: "Asia/Seoul",
@@ -233,9 +283,9 @@ async function runDailyBrief(env) {
       `<a href="${audioUrl}">▶ Listen now</a>\n\n` +
       `<i>Audio available for 30 days</i>`
     );
-    console.log("[Cron] Audio link sent. All done.");
+    console.log("[AudioBg] Audio link sent. All done.");
   } catch (e) {
-    console.error("[Cron] Audio link send failed:", e.message);
+    console.error("[AudioBg] Audio link send failed:", e.message);
   }
 }
 
@@ -262,7 +312,7 @@ async function generateBrief(apiKey, topic, dateStr) {
     `Each bullet must be a complete sentence with specific facts. Do not fabricate.`;
 
   const data = await geminiText(apiKey, GEMINI_TEXT_MODEL, prompt, system, true);
-  const raw  = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
   const clean = raw.replace(/```json\s*/gi, "").replace(/```\s*/gi, "").trim();
   const match = clean.match(/\{[\s\S]*\}/);
   if (!match) throw new Error("JSON parse failed. Raw: " + raw.slice(0, 300));
@@ -353,7 +403,7 @@ async function uploadAudioToR2(env, audioBase64, source, mimeType) {
   if (!env.AUDIO_BUCKET) throw new Error("AUDIO_BUCKET binding not set");
 
   // Decode base64 PCM
-  const binary   = atob(audioBase64);
+  const binary = atob(audioBase64);
   const pcmBytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) pcmBytes[i] = binary.charCodeAt(i);
 
@@ -366,13 +416,13 @@ async function uploadAudioToR2(env, audioBase64, source, mimeType) {
   if (mimeType && mimeType.includes("mp3")) {
     // Gemini returned MP3 — use directly
     finalBytes = pcmBytes;
-    finalMime  = "audio/mpeg";
-    ext        = "mp3";
+    finalMime = "audio/mpeg";
+    ext = "mp3";
   } else {
     // Wrap PCM in WAV container
     finalBytes = buildWavBytes(pcmBytes);
-    finalMime  = "audio/wav";
-    ext        = "wav";
+    finalMime = "audio/wav";
+    ext = "wav";
   }
 
   // File name: morning-brief-YYYY-MM-DD-{source}.{ext}
@@ -400,17 +450,17 @@ function getKey(env, index) {
 }
 
 async function geminiText(apiKey, model, prompt, systemInstruction, useSearch) {
-  const url  = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
   const body = {
     contents: [{ role: "user", parts: [{ text: prompt }] }],
   };
   if (systemInstruction) body.systemInstruction = { parts: [{ text: systemInstruction }] };
-  if (useSearch)         body.tools = [{ googleSearch: {} }];
+  if (useSearch) body.tools = [{ googleSearch: {} }];
 
-  const res  = await fetch(url, {
-    method:  "POST",
+  const res = await fetch(url, {
+    method: "POST",
     headers: { "Content-Type": "application/json" },
-    body:    JSON.stringify(body),
+    body: JSON.stringify(body),
   });
   const data = await res.json();
   if (data.error) throw new Error(`Gemini text error: ${data.error.message}`);
@@ -420,8 +470,8 @@ async function geminiText(apiKey, model, prompt, systemInstruction, useSearch) {
 async function geminiTTS(apiKey, text, voiceName) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_TTS_MODEL}:generateContent?key=${apiKey}`;
 
-  const res  = await fetch(url, {
-    method:  "POST",
+  const res = await fetch(url, {
+    method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       contents: [{ parts: [{ text }] }],
@@ -438,9 +488,9 @@ async function geminiTTS(apiKey, text, voiceName) {
   const data = await res.json();
   if (data.error) throw new Error(`Gemini TTS error: ${data.error.message}`);
 
-  const part      = data?.candidates?.[0]?.content?.parts?.[0]?.inlineData;
-  const audioData = part?.data     || null;
-  const mimeType  = part?.mimeType || "audio/wav";
+  const part = data?.candidates?.[0]?.content?.parts?.[0]?.inlineData;
+  const audioData = part?.data || null;
+  const mimeType = part?.mimeType || "audio/wav";
   return { audioData, mimeType };
 }
 
@@ -449,29 +499,29 @@ async function geminiTTS(apiKey, text, voiceName) {
 // ──────────────────────────────────────────────────────────────
 
 function buildWavBytes(pcmBytes) {
-  const sampleRate    = 24000;
-  const numChannels   = 1;
+  const sampleRate = 24000;
+  const numChannels = 1;
   const bitsPerSample = 16;
-  const byteRate      = sampleRate * numChannels * bitsPerSample / 8;
-  const blockAlign    = numChannels * bitsPerSample / 8;
-  const dataSize      = pcmBytes.length;
-  const buf           = new ArrayBuffer(44 + dataSize);
-  const v             = new DataView(buf);
+  const byteRate = sampleRate * numChannels * bitsPerSample / 8;
+  const blockAlign = numChannels * bitsPerSample / 8;
+  const dataSize = pcmBytes.length;
+  const buf = new ArrayBuffer(44 + dataSize);
+  const v = new DataView(buf);
 
   const s = (o, str) => { for (let i = 0; i < str.length; i++) v.setUint8(o + i, str.charCodeAt(i)); };
-  s(0,  "RIFF");
-  v.setUint32(4,  36 + dataSize,   true);
-  s(8,  "WAVE");
+  s(0, "RIFF");
+  v.setUint32(4, 36 + dataSize, true);
+  s(8, "WAVE");
   s(12, "fmt ");
-  v.setUint32(16, 16,              true);
-  v.setUint16(20, 1,               true);
-  v.setUint16(22, numChannels,     true);
-  v.setUint32(24, sampleRate,      true);
-  v.setUint32(28, byteRate,        true);
-  v.setUint16(32, blockAlign,      true);
-  v.setUint16(34, bitsPerSample,   true);
+  v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true);
+  v.setUint16(22, numChannels, true);
+  v.setUint32(24, sampleRate, true);
+  v.setUint32(28, byteRate, true);
+  v.setUint16(32, blockAlign, true);
+  v.setUint16(34, bitsPerSample, true);
   s(36, "data");
-  v.setUint32(40, dataSize,        true);
+  v.setUint32(40, dataSize, true);
   new Uint8Array(buf).set(pcmBytes, 44);
   return new Uint8Array(buf);
 }
@@ -481,17 +531,17 @@ function buildWavBytes(pcmBytes) {
 // ──────────────────────────────────────────────────────────────
 
 async function tgSendText(env, text) {
-  const token  = env.TG_TOKEN;
+  const token = env.TG_TOKEN;
   const chatId = env.TG_CHAT_ID;
   if (!token || !chatId) throw new Error("TG_TOKEN or TG_CHAT_ID not set");
 
   const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-    method:  "POST",
+    method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      chat_id:                  chatId,
-      text:                     text.slice(0, 4090),
-      parse_mode:               "HTML",
+      chat_id: chatId,
+      text: text.slice(0, 4090),
+      parse_mode: "HTML",
       disable_web_page_preview: false, // allow link preview for audio
     }),
   });
@@ -521,7 +571,7 @@ async function sendBriefToTelegram(env, brief, topic) {
   const sections = brief.sections || [];
   for (let i = 0; i < sections.length; i++) {
     const sec = sections[i];
-    const num = ["①","②","③","④","⑤"][i] || `${i+1}.`;
+    const num = ["①", "②", "③", "④", "⑤"][i] || `${i + 1}.`;
 
     // Pick only the 2 most important bullets to keep it readable
     const bullets = (sec.bullets || []).slice(0, 2);
@@ -549,7 +599,7 @@ function buildTgText(brief, topic) {
   });
 
   let msg = `🗞 <b>Morning Brief</b> — ${topic}\n${date}\n\n`;
-  msg    += `<i>${brief.summary || ""}</i>\n\n`;
+  msg += `<i>${brief.summary || ""}</i>\n\n`;
 
   for (const sec of brief.sections || []) {
     msg += `<b>${sec.label || ""}</b> — ${sec.headline || ""}\n`;
