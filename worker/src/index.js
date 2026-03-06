@@ -19,6 +19,11 @@
 // ══════════════════════════════════════════════════════════════
 
 const GEMINI_TEXT_MODEL = "gemini-2.5-flash";
+const FALLBACK_MODELS = [
+  "gemini-2.5-flash",
+  "gemini-3.1-flash-lite",
+  "gemini-2.5-flash-8b"
+];
 const GEMINI_TTS_MODEL = "gemini-2.5-flash-preview-tts";
 const KEY_INDEX_DEFAULT = 2;
 const R2_PUBLIC_BASE = "https://pub-cf8f191eed3d4357a77f8c51c526d31f.r2.dev";
@@ -248,7 +253,7 @@ async function generateAndSendAudio(env, brief, topic, voice, stories, dateStr) 
   let audioBase64, audioMime;
   try {
     const ttsResult = await geminiTTS(key, podScript, voice);
-    audioBase64 = ttsResult.audioData;
+    audioBase66 = ttsResult.audioData;
     audioMime = ttsResult.mimeType || "audio/wav";
     if (!audioBase64) throw new Error("Empty audio data");
     console.log(`[AudioBg] TTS ready (${audioBase64.length} base64 chars), mime: ${audioMime}`);
@@ -449,22 +454,73 @@ function getKey(env, index) {
   return key;
 }
 
-async function geminiText(apiKey, model, prompt, systemInstruction, useSearch) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-  const body = {
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
-  };
-  if (systemInstruction) body.systemInstruction = { parts: [{ text: systemInstruction }] };
-  if (useSearch) body.tools = [{ googleSearch: {} }];
+async function geminiText(apiKey, initialModel, prompt, systemInstruction, useSearch) {
+  const modelsToTry = [initialModel];
+  // Mix in fallbacks, ensuring we don't duplicate the initial model
+  for (const m of FALLBACK_MODELS) {
+    if (m !== initialModel && !modelsToTry.includes(m)) {
+      modelsToTry.push(m);
+    }
+  }
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  const data = await res.json();
-  if (data.error) throw new Error(`Gemini text error: ${data.error.message}`);
-  return data;
+  const delays = [1000, 2000, 4000];
+  let lastError = null;
+
+  for (let modelIndex = 0; modelIndex < modelsToTry.length; modelIndex++) {
+    const currentModel = modelsToTry[modelIndex];
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${apiKey}`;
+
+    const body = {
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+    };
+    if (systemInstruction) body.systemInstruction = { parts: [{ text: systemInstruction }] };
+    if (useSearch) body.tools = [{ googleSearch: {} }];
+
+    for (let attempt = 0; attempt < delays.length; attempt++) {
+      try {
+        if (modelIndex > 0 && attempt === 0) {
+          console.warn(`[Fallback] Primary model failed. Trying fallback model: ${currentModel}`);
+        }
+
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+
+        const data = await res.json();
+
+        if (data.error) {
+          const errorMsg = data.error.message || JSON.stringify(data.error);
+          const isQuotaError = res.status === 429 || res.status === 503 ||
+            errorMsg.includes("CAPACITY_EXHAUSTED") ||
+            errorMsg.includes("quota") ||
+            errorMsg.includes("rate limit");
+
+          if (isQuotaError && modelIndex < modelsToTry.length - 1) {
+            console.warn(`[API] Model ${currentModel} exhausted (${errorMsg}). Switching to next fallback.`);
+            throw new Error("MODEL_EXHAUSTED"); // Break inner loop
+          }
+          throw new Error(`Gemini text error (${currentModel}): ${errorMsg}`);
+        }
+
+        return data; // Success
+      } catch (error) {
+        lastError = error;
+
+        if (error.message === "MODEL_EXHAUSTED") {
+          break; // Move to next model immediately
+        }
+
+        console.error(`Attempt ${attempt + 1} for ${currentModel} failed:`, error.message);
+        if (attempt < delays.length - 1) {
+          await new Promise(r => setTimeout(r, delays[attempt]));
+        }
+      }
+    }
+  }
+
+  throw lastError;
 }
 
 async function geminiTTS(apiKey, text, voiceName) {

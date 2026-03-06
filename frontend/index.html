@@ -1730,7 +1730,11 @@
   <script>
     const WORKER = "https://nameless-math-87ca.jeongdael00.workers.dev/";
     const KEY_INDEX = 2;
-    const MODEL = "gemini-2.5-flash";
+    const FALLBACK_MODELS = [
+      "gemini-2.5-flash",
+      "gemini-3.1-flash-lite",
+      "gemini-2.5-flash-8b"
+    ];
 
     let briefData = null;
     let chatHistory = [];
@@ -1776,28 +1780,58 @@
     // ── API calls ──
     async function callGemini(prompt, system, useSearch) {
       useSearch = useSearch || false;
-      const res = await fetch(WORKER, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prompt: prompt,
-          systemInstruction: system,
-          model: MODEL,
-          keyIndex: KEY_INDEX,
-          useSearch: useSearch
-        })
-      });
-      if (!res.ok) {
-        const t = await res.text();
-        throw new Error("HTTP " + res.status + ": " + t.slice(0, 300));
+      let lastError = null;
+
+      for (let i = 0; i < FALLBACK_MODELS.length; i++) {
+        const currentModel = FALLBACK_MODELS[i];
+        if (i > 0) {
+          console.warn(`[Fallback] Primary model failed. Trying fallback model: ${currentModel}`);
+        }
+
+        try {
+          const res = await fetch(WORKER, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              prompt: prompt,
+              systemInstruction: system,
+              model: currentModel,
+              keyIndex: KEY_INDEX,
+              useSearch: useSearch
+            })
+          });
+
+          if (!res.ok) {
+            const t = await res.text();
+            let isQuotaError = res.status === 429 || res.status === 503;
+            if (t.includes("CAPACITY_EXHAUSTED") || t.includes("quota") || t.includes("rate limit")) {
+              isQuotaError = true;
+            }
+            if (isQuotaError && i < FALLBACK_MODELS.length - 1) {
+              console.warn(`[API] Model ${currentModel} exhausted. Switching to next fallback.`);
+              throw new Error("MODEL_EXHAUSTED");
+            }
+            throw new Error("HTTP " + res.status + ": " + t.slice(0, 300));
+          }
+
+          const data = await res.json();
+          if (data.error) throw new Error(data.error);
+
+          const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (!text) throw new Error("No text in response: " + JSON.stringify(data).slice(0, 200));
+
+          const chunks = data?.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+          const sources = chunks.map(c => c.web?.title || c.web?.uri).filter(Boolean);
+
+          return { text, sources };
+        } catch (e) {
+          lastError = e;
+          if (e.message !== "MODEL_EXHAUSTED" && i === FALLBACK_MODELS.length - 1) {
+            throw e; // If it's the last model and not a simple exhaustion error, throw it
+          }
+        }
       }
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!text) throw new Error("No text in response: " + JSON.stringify(data).slice(0, 200));
-      const chunks = data?.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-      const sources = chunks.map(c => c.web?.title || c.web?.uri).filter(Boolean);
-      return { text, sources };
+      throw lastError || new Error("All fallback models failed.");
     }
 
     async function callTTS(text, voiceName) {
