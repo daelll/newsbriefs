@@ -17,11 +17,11 @@
 // Cron Trigger:
 //   0 21 * * *  =  KST 06:00 daily
 // ══════════════════════════════════════════════════════════════
-
-const GEMINI_TEXT_MODEL = "gemini-2.5-flash";
+// MODEL SETTINGS
+const GEMINI_TEXT_MODEL = "gemini-3.1-flash-lite";
 const FALLBACK_MODELS = [
-  "gemini-2.5-flash",
   "gemini-3.1-flash-lite",
+  "gemini-2.5-flash",
   "gemini-2.5-flash-8b"
 ];
 const GEMINI_TTS_MODEL = "gemini-2.5-flash-preview-tts";
