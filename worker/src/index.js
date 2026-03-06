@@ -18,7 +18,7 @@
 //   0 21 * * *  =  KST 06:00 daily
 // ══════════════════════════════════════════════════════════════
 // MODEL SETTINGS
-const GEMINI_TEXT_MODEL = "gemini-3.1-flash-lite";
+const GEMINI_TEXT_MODEL = "gemini-3.1-flash-lite-preview";
 const FALLBACK_MODELS = [
   "gemini-3.1-flash-lite",
   "gemini-2.5-flash",
