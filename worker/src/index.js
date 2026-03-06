@@ -253,7 +253,7 @@ async function generateAndSendAudio(env, brief, topic, voice, stories, dateStr) 
   let audioBase64, audioMime;
   try {
     const ttsResult = await geminiTTS(key, podScript, voice);
-    audioBase66 = ttsResult.audioData;
+    audioBase64 = ttsResult.audioData;
     audioMime = ttsResult.mimeType || "audio/wav";
     if (!audioBase64) throw new Error("Empty audio data");
     console.log(`[AudioBg] TTS ready (${audioBase64.length} base64 chars), mime: ${audioMime}`);
