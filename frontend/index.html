@@ -859,242 +859,7 @@
       cursor: not-allowed;
     }
 
-    /* ── PODCAST TAB ── */
-    .podcast-layout {
-      max-width: 780px;
-      margin: 0 auto;
-      padding: 3rem 2.5rem;
-    }
 
-    .podcast-header {
-      margin-bottom: 3rem;
-    }
-
-    .podcast-kicker {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.75rem;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: var(--amber);
-      margin-bottom: 0.75rem;
-    }
-
-    .podcast-title {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 2.4rem;
-      font-weight: 300;
-      color: var(--white);
-      margin-bottom: 0.5rem;
-    }
-
-    .podcast-subtitle {
-      font-size: 0.95rem;
-      color: var(--text-dim);
-      font-weight: 300;
-      margin-bottom: 2rem;
-    }
-
-    /* Player */
-    .player-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      padding: 2rem;
-      margin-bottom: 2rem;
-    }
-
-    .player-status {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.72rem;
-      color: var(--text-dim);
-      letter-spacing: 0.1em;
-      margin-bottom: 1.5rem;
-      text-transform: uppercase;
-    }
-
-    .player-controls {
-      display: flex;
-      align-items: center;
-      gap: 1.5rem;
-      margin-bottom: 1.5rem;
-    }
-
-    .play-circle {
-      width: 48px;
-      height: 48px;
-      border: 1.5px solid var(--amber);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all 0.2s;
-      flex-shrink: 0;
-      background: none;
-    }
-
-    .play-circle:hover {
-      background: var(--amber);
-    }
-
-    .play-circle:hover svg {
-      fill: var(--bg);
-    }
-
-    .play-circle svg {
-      width: 16px;
-      height: 16px;
-      fill: var(--amber);
-    }
-
-    .player-info {
-      flex: 1;
-    }
-
-    .player-track {
-      font-family: 'Manrope', sans-serif;
-      font-size: 1rem;
-      font-weight: 500;
-      color: var(--white);
-      margin-bottom: 0.25rem;
-    }
-
-    .player-time {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.72rem;
-      color: var(--text-dim);
-    }
-
-    .player-download {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.72rem;
-      color: var(--text-dim);
-      border: 1px solid var(--border);
-      padding: 0.4rem 0.75rem;
-      text-decoration: none;
-      transition: all 0.15s;
-      letter-spacing: 0.08em;
-    }
-
-    .player-download:hover {
-      color: var(--amber);
-      border-color: var(--amber-dim);
-    }
-
-    .progress-track {
-      width: 100%;
-      height: 2px;
-      background: var(--border2);
-      cursor: pointer;
-      position: relative;
-    }
-
-    .progress-fill {
-      height: 100%;
-      background: var(--amber);
-      width: 0%;
-      pointer-events: none;
-    }
-
-    /* Gen button */
-    .gen-podcast-btn {
-      background: none;
-      border: 1px solid var(--border2);
-      color: var(--text);
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.82rem;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      padding: 0.9rem 1.8rem;
-      cursor: pointer;
-      transition: all 0.2s;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      margin-bottom: 1.5rem;
-    }
-
-    .gen-podcast-btn:hover {
-      border-color: var(--amber-dim);
-      color: var(--amber);
-    }
-
-    .gen-podcast-btn:disabled {
-      opacity: 0.35;
-      cursor: not-allowed;
-    }
-
-    .gen-podcast-btn .btn-icon {
-      font-size: 0.9rem;
-    }
-
-    /* Podcast settings row */
-    .podcast-settings {
-      display: flex;
-      gap: 1rem;
-      margin-bottom: 2rem;
-      flex-wrap: wrap;
-    }
-
-    .setting-group {
-      display: flex;
-      flex-direction: column;
-      gap: 0.35rem;
-    }
-
-    .setting-label {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.7rem;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: var(--text-dim);
-    }
-
-    .setting-select {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      color: var(--text);
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.8rem;
-      padding: 0.5rem 0.75rem;
-      outline: none;
-      cursor: pointer;
-      transition: border-color 0.15s;
-    }
-
-    .setting-select:hover,
-    .setting-select:focus {
-      border-color: var(--border2);
-    }
-
-    /* Gen progress */
-    .gen-progress {
-      display: none;
-      margin-bottom: 1.5rem;
-    }
-
-    .gen-progress.visible {
-      display: block;
-    }
-
-    .gen-progress-label {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.75rem;
-      color: var(--amber);
-      letter-spacing: 0.08em;
-      margin-bottom: 0.5rem;
-    }
-
-    .gen-progress-bar {
-      height: 1px;
-      background: var(--border2);
-    }
-
-    .gen-progress-fill {
-      height: 100%;
-      background: var(--amber);
-      width: 0%;
-      transition: width 0.5s;
-    }
 
     /* ── INSIGHTS TAB ── */
     .insights-layout {
@@ -1535,31 +1300,10 @@
               <div style="display:flex;gap:0.75rem;margin-top:0.4rem;">
                 <label class="tg-check"><input type="checkbox" id="tgSendBrief" checked onchange="saveTgConfig()">
                   Brief</label>
-                <label class="tg-check"><input type="checkbox" id="tgSendPodcast" checked onchange="saveTgConfig()">
-                  Podcast</label>
               </div>
             </div>
           </div>
-          <div class="tg-row" style="margin-bottom:0;">
-            <div class="tg-field">
-              <label class="tg-label">Voice</label>
-              <select class="tg-input" id="voiceSelectTg" style="cursor:pointer;">
-                <option value="Charon">Charon — Deep</option>
-                <option value="Puck">Puck — Energetic</option>
-                <option value="Kore">Kore — Professional</option>
-                <option value="Aoede">Aoede — Warm</option>
-                <option value="Fenrir">Fenrir — Bold</option>
-              </select>
-            </div>
-            <div class="tg-field">
-              <label class="tg-label">Stories in podcast</label>
-              <select class="tg-input" id="podDepthTg" style="cursor:pointer;">
-                <option value="3">3 — Focused</option>
-                <option value="5" selected>5 — Balanced (~10m)</option>
-                <option value="7">7 — Deep dive (Longer)</option>
-              </select>
-            </div>
-          </div>
+
           <div class="tg-actions" style="margin-top:1rem;">
             <button class="tg-btn" id="sendNowBtn" onclick="sendNow()">▶ Send Now</button>
             <button class="tg-btn" onclick="testTelegram()">⚡ Test Connection</button>
@@ -1567,7 +1311,7 @@
               Schedule</button>
           </div>
           <div class="tg-note" style="margin-top:0.75rem;">
-            <strong>Send Now</strong> — generates fresh brief + podcast for selected category and sends immediately.<br>
+            <strong>Send Now</strong> — generates fresh brief for selected category and sends immediately.<br>
             <strong>Schedule</strong> — auto-sends daily at set time. Keep this tab open for scheduling to work.<br>
             Token &amp; Chat ID are stored securely in your Cloudflare Worker environment variables.
           </div>
@@ -1606,7 +1350,7 @@
 
     <div class="tab-nav">
       <button class="tab-btn active" onclick="switchTab('brief', this)">The Brief</button>
-      <button class="tab-btn" onclick="switchTab('podcast', this)">Podcast</button>
+
       <button class="tab-btn" onclick="switchTab('insights', this)">Insights</button>
     </div>
 
@@ -1643,67 +1387,7 @@
       </div>
     </div>
 
-    <!-- TAB: PODCAST -->
-    <div id="tab-podcast" class="tab-panel">
-      <div class="podcast-layout">
-        <div class="podcast-header">
-          <div class="podcast-kicker">Audio Edition</div>
-          <div class="podcast-title">Morning Brief Podcast</div>
-          <div class="podcast-subtitle">Narrative storytelling — your news, not a bulletin board.</div>
-        </div>
 
-        <div class="podcast-settings">
-          <div class="setting-group">
-            <div class="setting-label">Voice</div>
-            <select class="setting-select" id="voiceSelect">
-              <option value="Charon">Charon — Deep, authoritative</option>
-              <option value="Puck">Puck — Energetic, clear</option>
-              <option value="Kore">Kore — Professional, female</option>
-              <option value="Aoede">Aoede — Warm, conversational</option>
-              <option value="Fenrir">Fenrir — Bold, grounded</option>
-            </select>
-          </div>
-          <div class="setting-group">
-            <div class="setting-label">Stories</div>
-            <select class="setting-select" id="podDepth">
-              <option value="3">3 — Focused</option>
-              <option value="5" selected>5 — Balanced (~10m)</option>
-              <option value="7">7 — Deep dive (Longer)</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="gen-progress" id="genProgress">
-          <div class="gen-progress-label" id="genProgressLabel">Writing script…</div>
-          <div class="gen-progress-bar">
-            <div class="gen-progress-fill" id="genProgressFill"></div>
-          </div>
-        </div>
-
-        <button class="gen-podcast-btn" id="genPodcastBtn" onclick="generatePodcast()">
-          <span class="btn-icon">▶</span> Generate Podcast Episode
-        </button>
-
-        <div class="player-card" id="playerCard" style="display:none;">
-          <div class="player-status" id="playerStatus">READY TO PLAY</div>
-          <div class="player-controls">
-            <button class="play-circle" onclick="togglePlay()">
-              <svg id="playIcon" viewBox="0 0 24 24">
-                <polygon points="5,3 19,12 5,21" />
-              </svg>
-            </button>
-            <div class="player-info">
-              <div class="player-track" id="playerTrack">Morning Brief</div>
-              <div class="player-time" id="playerTime">0:00 / 0:00</div>
-            </div>
-            <a id="downloadLink" class="player-download" download="morning-brief.wav">↓ WAV</a>
-          </div>
-          <div class="progress-track" onclick="seekAudio(event)">
-            <div class="progress-fill" id="progressFill"></div>
-          </div>
-        </div>
-      </div>
-    </div>
 
     <!-- TAB: INSIGHTS -->
     <div id="tab-insights" class="tab-panel">
@@ -1725,13 +1409,12 @@
   </div>
 
   <div class="toast" id="toast"></div>
-  <audio id="audioEl" style="display:none;"></audio>
+
 
   <script>
     const WORKER = "https://nameless-math-87ca.jeongdael00.workers.dev/";
     const KEY_INDEX = 2;
     const FALLBACK_MODELS = [
-      "gemini-3.1-flash-lite-preview",
       "gemini-3.1-flash-lite",
       "gemini-2.5-flash",
       "gemini-2.5-flash-8b"
@@ -1739,8 +1422,7 @@
 
     let briefData = null;
     let chatHistory = [];
-    let lastAudioBlob = null;
-    let lastAudioBase64 = null;
+
 
     // ── Init ──
     (function () {
@@ -1835,52 +1517,7 @@
       throw lastError || new Error("All fallback models failed.");
     }
 
-    async function callTTS(text, voiceName) {
-      const res = await fetch(WORKER, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: text, mode: "tts", keyIndex: KEY_INDEX, ttsConfig: { voiceName } })
-      });
-      if (!res.ok) throw new Error("TTS HTTP " + res.status);
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      return data;
-    }
 
-    // Gemini TTS returns raw PCM (24kHz, 16-bit, mono) — must wrap in WAV header
-    function pcmToWav(base64pcm) {
-      const raw = atob(base64pcm);
-      const pcmBytes = new Uint8Array(raw.length);
-      for (let i = 0; i < raw.length; i++) pcmBytes[i] = raw.charCodeAt(i);
-
-      const sampleRate = 24000;
-      const numChannels = 1;
-      const bitsPerSample = 16;
-      const byteRate = sampleRate * numChannels * bitsPerSample / 8;
-      const blockAlign = numChannels * bitsPerSample / 8;
-      const dataSize = pcmBytes.length;
-      const buffer = new ArrayBuffer(44 + dataSize);
-      const view = new DataView(buffer);
-
-      function writeStr(offset, str) {
-        for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
-      }
-      writeStr(0, "RIFF");
-      view.setUint32(4, 36 + dataSize, true);
-      writeStr(8, "WAVE");
-      writeStr(12, "fmt ");
-      view.setUint32(16, 16, true);
-      view.setUint16(20, 1, true);
-      view.setUint16(22, numChannels, true);
-      view.setUint32(24, sampleRate, true);
-      view.setUint32(28, byteRate, true);
-      view.setUint16(32, blockAlign, true);
-      view.setUint16(34, bitsPerSample, true);
-      writeStr(36, "data");
-      view.setUint32(40, dataSize, true);
-      new Uint8Array(buffer).set(pcmBytes, 44);
-      return new Blob([buffer], { type: "audio/wav" });
-    }
 
     // ── Loading progress helper ──
     function setLoading(pct, step) {
@@ -2033,139 +1670,7 @@
       chatHistory = [];
     }
 
-    // ── Podcast ──
-    async function generatePodcast() {
-      if (!briefData) return;
-      const btn = document.getElementById("genPodcastBtn");
-      btn.disabled = true;
 
-      const voice = document.getElementById("voiceSelect").value;
-      const storyCount = parseInt(document.getElementById("podDepth").value);
-      const topStories = (briefData.brief.sections || []).slice(0, storyCount);
-
-      function setProgress(pct, label) {
-        document.getElementById("genProgress").classList.add("visible");
-        document.getElementById("genProgressLabel").textContent = label;
-        document.getElementById("genProgressFill").style.width = pct + "%";
-      }
-
-      const system = "You are a celebrated narrative podcast host — intelligent, dry wit, deeply informed.\n" +
-        "You are NOT a news anchor. You are a storyteller who happens to cover news.\n" +
-        "Think: the intimacy of 'Radiolab', the intelligence of 'The Economist', the pace of 'Hardcore History' (condensed).";
-
-      const storiesText = topStories.map((s, i) =>
-        "STORY " + (i + 1) + ":\nHeadline: " + s.headline + "\n" + s.body
-      ).join("\n\n---\n\n");
-
-      const scriptPrompt =
-        "Write a morning news podcast script for 'Morning Brief'.\n" +
-        "Date: " + new Date().toDateString() + "\n\n" +
-        "Source material:\n" + storiesText + "\n\n" +
-        "═══ SCRIPT REQUIREMENTS ═══\n\n" +
-        "OPENING (30-40 words):\n" +
-        "- Open with a single, arresting observation or question that pulls the listener in\n" +
-        "- NOT 'Good morning' — something that makes you think 'wait, tell me more'\n" +
-        "- Then briefly set the scene for what today holds\n\n" +
-        "FOR EACH OF THE " + storyCount + " STORIES:\n" +
-        "- Begin with a narrative hook — a moment, a detail, a paradox, a human angle\n" +
-        "- Build the story: context → development → stakes → what to watch\n" +
-        "- Use the texture of good longform journalism — specific scenes, specific numbers\n" +
-        "- Transitions should feel earned, not mechanical ('Moving on' is banned)\n" +
-        "- Find the angle that makes this story genuinely interesting, not just important\n\n" +
-        "CLOSING (20-30 words):\n" +
-        "- One thought that lingers. A question the day leaves open. Not a summary.\n\n" +
-        "═══ VOICE & STYLE ═══\n" +
-        "- Write entirely for the ear. Read it aloud mentally as you write.\n" +
-        "- SPEAK SLOWLY AND DELIBERATELY. To force the AI voice to speak slower, insert frequent commas (,), ellipses (...), and em-dashes (—) exactly where natural breaths or pauses should occur.\n" +
-        "- Separate thoughts with lots of short, punchy sentences or distinct paragraphs. This naturally prevents the voice from speeding up.\n" +
-        "- Use natural English rhythm: contractions, varied sentence length, rhetorical questions\n" +
-        "- Em-dashes (—) for beats and asides. Ellipses for deliberate pauses.\n" +
-        "- Dry, understated intelligence is welcome. Forced humor is not.\n" +
-        "- No jargon. No passive voice. No filler.\n" +
-        "- Speak to ONE intelligent adult who has plenty of time for a thorough listen.\n\n" +
-        "TARGET: 1300-1500 words (Minimum 10 minutes of speaking). Return ONLY the spoken script text — nothing else.";
-
-      try {
-        setProgress(20, "Writing narrative script…");
-        const { text: script } = await callGemini(scriptPrompt, system, false);
-
-        setProgress(55, "Generating voice: " + voice + "…");
-        const ttsResult = await callTTS(script, voice);
-        if (!ttsResult.audioData) throw new Error("No audio data returned.");
-
-        setProgress(85, "Processing audio…");
-
-        // Build proper WAV from raw PCM
-        const wavBlob = pcmToWav(ttsResult.audioData);
-        const url = URL.createObjectURL(wavBlob);
-
-        // Store for telegram sending
-        lastAudioBlob = wavBlob;
-        lastAudioBase64 = ttsResult.audioData;
-
-        const audio = document.getElementById("audioEl");
-        audio.src = url;
-        // Force load before play attempt
-        await new Promise(resolve => {
-          audio.oncanplay = resolve;
-          audio.onerror = resolve;
-          audio.load();
-          setTimeout(resolve, 3000); // fallback
-        });
-
-        document.getElementById("downloadLink").href = url;
-        document.getElementById("playerTrack").textContent =
-          "Morning Brief · " + voice + " · " + new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" });
-        document.getElementById("playerStatus").textContent = "READY — " + storyCount + " STORIES";
-        document.getElementById("playerCard").style.display = "block";
-
-        setupAudio();
-        setProgress(100, "Done");
-        setTimeout(() => document.getElementById("genProgress").classList.remove("visible"), 800);
-        showToast("Podcast ready — press play ▶");
-
-      } catch (e) {
-        showToast("Podcast error: " + e.message);
-        document.getElementById("genProgress").classList.remove("visible");
-      } finally {
-        btn.disabled = false;
-      }
-    }
-
-    function setupAudio() {
-      const audio = document.getElementById("audioEl");
-      audio.ontimeupdate = () => {
-        const pct = audio.duration ? (audio.currentTime / audio.duration * 100) : 0;
-        document.getElementById("progressFill").style.width = pct + "%";
-        document.getElementById("playerTime").textContent =
-          fmt(audio.currentTime) + " / " + fmt(audio.duration || 0);
-      };
-      audio.onended = () => {
-        document.getElementById("playIcon").innerHTML = '<polygon points="5,3 19,12 5,21"/>';
-      };
-    }
-
-    function togglePlay() {
-      const audio = document.getElementById("audioEl");
-      if (audio.paused) {
-        audio.play();
-        document.getElementById("playIcon").innerHTML = '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
-      } else {
-        audio.pause();
-        document.getElementById("playIcon").innerHTML = '<polygon points="5,3 19,12 5,21"/>';
-      }
-    }
-
-    function seekAudio(e) {
-      const audio = document.getElementById("audioEl");
-      if (!audio.duration) return;
-      audio.currentTime = (e.offsetX / e.currentTarget.offsetWidth) * audio.duration;
-    }
-
-    function fmt(s) {
-      if (!s || isNaN(s)) return "0:00";
-      return Math.floor(s / 60) + ":" + Math.floor(s % 60).toString().padStart(2, "0");
-    }
 
     // ── Insights ──
     async function generateInsights() {
@@ -2255,8 +1760,6 @@
 
     // ── Navigation ──
     function goHome() {
-      const audio = document.getElementById("audioEl");
-      audio.pause(); audio.src = "";
       briefData = null;
       chatHistory = [];
       showScreen("home");
@@ -2282,15 +1785,14 @@
     // ── TELEGRAM ──────────────────────────────────────────────────
     // All requests go through Cloudflare Worker which holds TG_TOKEN + TG_CHAT_ID securely
 
-    async function sendViaTelegramWorker(telegramText, audioBase64) {
+    async function sendViaTelegramWorker(telegramText) {
       const res = await fetch(WORKER, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           telegramMode: true,
           keyIndex: KEY_INDEX,
-          telegramText: telegramText || null,
-          telegramAudio: audioBase64 || null
+          telegramText: telegramText || null
         })
       });
       if (!res.ok) throw new Error("Worker HTTP " + res.status);
@@ -2325,9 +1827,6 @@
 
       const catNames = { general: "World News", geopolitics: "Geopolitics", finance: "Finance & Markets", tech: "Technology & AI", science: "Science & Health" };
       const topic = catNames[selectedCat] || "World News";
-      const sendPodcast = document.getElementById("tgSendPodcast").checked;
-      const tgVoice = document.getElementById("voiceSelectTg").value;
-      const tgDepth = parseInt(document.getElementById("podDepthTg").value);
 
       try {
         // 1. Generate Brief
@@ -2340,34 +1839,10 @@
         const brief = JSON.parse(match[0]);
         const tgText = buildTelegramText(brief, topic);
 
-        // 2. Generate Podcast if enabled
-        let audioBase64 = null;
-        if (sendPodcast) {
-          btn.textContent = "Writing podcast script…";
-          const voice = tgVoice;
-          const storyCount = tgDepth;
-          const topStories = (brief.sections || []).slice(0, storyCount);
-          const storiesText = topStories.map((s, i) => "STORY " + (i + 1) + ": " + s.headline + "\n" + (s.bullets || []).join(". ")).join("\n\n---\n\n");
-
-          const podSystem = "You are an award-winning narrative podcast host. Intelligent, warm, dry wit. NOT a news anchor — a storyteller. Think NPR meets The Economist.";
-          const podPrompt = "Write a morning news podcast script for 'Morning Brief'.\nDate: " + new Date().toDateString() + "\nStories:\n" + storiesText + "\n\nOPENING: One arresting sentence (not 'Good morning'). Then frame the day.\nEACH STORY: Hook → context → what happened → stakes → what to watch. Narrative arc, not bullet reading.\nTRANSITIONS: Earned, not mechanical. Never 'Moving on'.\nCLOSING: One lingering thought or open question.\nSTYLE: Write for the ear. Speak SLOWLY AND DELIBERATELY. To force the AI to not speed up, use frequent short sentences, distinct paragraph breaks, and lots of ellipses (...) and em-dashes (—) for structural pauses.\nTARGET: 1300-1500 words to ensure at least 10 minutes of audio. Return ONLY the spoken script.";
-          const { text: script } = await callGemini(podPrompt, podSystem, false);
-
-          btn.textContent = "Generating voice…";
-          const ttsResult = await callTTS(script, voice);
-          if (!ttsResult.audioData) throw new Error("No audio data");
-          audioBase64 = ttsResult.audioData;
-
-          // Also update local player
-          lastAudioBase64 = audioBase64;
-          lastAudioBlob = pcmToWav(audioBase64);
-        }
-
-        // 3. Send via Worker
+        // 2. Send via Worker
         btn.textContent = "Sending to Telegram…";
         await sendViaTelegramWorker(
-          document.getElementById("tgSendBrief").checked ? tgText : null,
-          audioBase64
+          document.getElementById("tgSendBrief").checked ? tgText : null
         );
 
         showToast("✓ Sent to Telegram!");
@@ -2400,10 +1875,7 @@
       try {
         const cfg = JSON.parse(localStorage.getItem("tg_config") || "{}");
         if (cfg.time) document.getElementById("tgTime").value = cfg.time;
-        if (cfg.voice) document.getElementById("voiceSelectTg").value = cfg.voice;
-        if (cfg.depth) document.getElementById("podDepthTg").value = cfg.depth;
         if (cfg.sendBrief !== undefined) document.getElementById("tgSendBrief").checked = cfg.sendBrief;
-        if (cfg.sendPodcast !== undefined) document.getElementById("tgSendPodcast").checked = cfg.sendPodcast;
         updateTgStatus();
       } catch (e) { }
     })();
@@ -2411,10 +1883,7 @@
     function saveTgConfig() {
       const cfg = {
         time: document.getElementById("tgTime").value,
-        voice: document.getElementById("voiceSelectTg").value,
-        depth: document.getElementById("podDepthTg").value,
         sendBrief: document.getElementById("tgSendBrief").checked,
-        sendPodcast: document.getElementById("tgSendPodcast").checked,
       };
       localStorage.setItem("tg_config", JSON.stringify(cfg));
       updateTgStatus();
